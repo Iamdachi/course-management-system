@@ -1,4 +1,4 @@
-.idea/
+**.idea/
 .venv/
 **.py[cod]
 .DS_Store
