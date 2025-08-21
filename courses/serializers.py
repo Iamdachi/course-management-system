@@ -22,7 +22,21 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-# ---------- Courses ----------
+
+# ---------- Lectures ----------
+class LectureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lecture
+        fields = ["id", "course", "topic", "presentation", "created_at", "updated_at"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        user = self.context["request"].user
+        # Restrict the course choices in the browsable form
+        self.fields["course"].queryset = Course.objects.filter(teachers=user)
+
+
+
 class CourseSerializer(serializers.ModelSerializer):
     # Show teachers and students as read-only usernames
     teachers = serializers.SlugRelatedField(
@@ -41,18 +55,6 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = ['id', 'title', 'description', 'teachers', 'students']
-
-# ---------- Lectures ----------
-class LectureSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Lecture
-        fields = ["id", "course", "topic", "presentation", "created_at", "updated_at"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        user = self.context["request"].user
-        # Restrict the course choices in the browsable form
-        self.fields["course"].queryset = Course.objects.filter(teachers=user)
 
 
 class HomeworkSerializer(serializers.ModelSerializer):
