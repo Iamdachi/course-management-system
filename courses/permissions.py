@@ -29,21 +29,3 @@ class IsCourseTeacherOrReadOnly(permissions.BasePermission):
             return True
         course = getattr(obj, "course", None) or obj.lecture.course
         return request.user in course.teachers.all()
-
-class IsOwnerTeacher(permissions.BasePermission):
-    """Only teachers of the course can modify. Everyone can read."""
-
-    def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True  # anyone can read
-
-        user = request.user
-        if not user.is_authenticated or user.role != "teacher":
-            return False
-
-        # obj can be Lecture or Homework
-        if hasattr(obj, "course"):
-            return obj.course.teachers.filter(id=user.id).exists()
-        if hasattr(obj, "lecture"):
-            return obj.lecture.course.teachers.filter(id=user.id).exists()
-        return False
