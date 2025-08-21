@@ -1,0 +1,8 @@
+.idea/
+.venv/
+**.py[cod]
+.DS_Store
+**.sqlite3
+**.env
+**/migrations/__pycache__/
+**/migrations/*.py
