@@ -24,24 +24,48 @@ class UserSerializer(serializers.ModelSerializer):
 
 # ---------- Courses ----------
 class CourseSerializer(serializers.ModelSerializer):
-    teachers = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(role=Role.TEACHER))
-    students = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(role=Role.STUDENT), required=False)
+    # Show teachers and students as read-only usernames
+    teachers = serializers.SlugRelatedField(
+        many=True,
+        slug_field='username',
+        queryset=User.objects.filter(role=Role.TEACHER)
+    )
+    students = serializers.SlugRelatedField(
+        many=True,
+        slug_field='username',
+        queryset=User.objects.filter(role=Role.STUDENT),
+        required=False,  # field is optional
+        allow_empty=True  # allow submitting empty list
+    )
 
     class Meta:
         model = Course
-        fields = "__all__"
+        fields = ['id', 'title', 'description', 'teachers', 'students']
 
 # ---------- Lectures ----------
 class LectureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lecture
-        fields = "__all__"
+        fields = ["id", "course", "topic", "presentation", "created_at", "updated_at"]
 
-# ---------- Homework ----------
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        user = self.context["request"].user
+        # Restrict the course choices in the browsable form
+        self.fields["course"].queryset = Course.objects.filter(teachers=user)
+
+
 class HomeworkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Homework
-        fields = "__all__"
+        fields = ["id", "lecture", "description", "created_at", "updated_at"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        user = self.context["request"].user
+        # Restrict lecture choices to lectures in user's own courses
+        self.fields["lecture"].queryset = Lecture.objects.filter(course__teachers=user)
+
 
 # ---------- Homework Submissions ----------
 class HomeworkSubmissionSerializer(serializers.ModelSerializer):
