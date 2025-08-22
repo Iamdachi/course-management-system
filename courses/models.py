@@ -30,7 +30,7 @@ class User(AbstractUser, UUIDModel):
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.STUDENT)
 
 
-+class Course(UUIDModel, TimeStampedModel):
+class Course(UUIDModel, TimeStampedModel):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     teachers = models.ManyToManyField(User, related_name="teaching_courses", limit_choices_to={"role": Role.TEACHER})
