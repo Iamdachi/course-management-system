@@ -4,7 +4,6 @@ from .models import Course, Lecture, Homework, HomeworkSubmission, Grade, GradeC
 
 User = get_user_model()
 
-# ---------- Users ----------
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -23,7 +22,6 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-# ---------- Lectures ----------
 class LectureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lecture
@@ -69,17 +67,17 @@ class HomeworkSerializer(serializers.ModelSerializer):
         self.fields["lecture"].queryset = Lecture.objects.filter(course__teachers=user)
 
 
-# ---------- Homework Submissions ----------
 class HomeworkSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = HomeworkSubmission
         fields = "__all__"
 
-# ---------- Grades ----------
+
 class GradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Grade
         fields = "__all__"
+
 
 class GradeCommentSerializer(serializers.ModelSerializer):
     class Meta:
