@@ -9,9 +9,11 @@ from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Course, Role, Lecture, Homework
-from .permissions import IsTeacherOrReadOnly, IsCourseTeacherOrReadOnly
-from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer
+from .models import Course, Role, Lecture, Homework, HomeworkSubmission, Grade
+from .permissions import IsTeacherOrReadOnly, IsCourseTeacherOrReadOnly, IsStudentAndEnrolled, IsTeacherOfCourse, \
+    IsGradeOwnerOrCourseTeacher
+from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer, \
+    HomeworkSubmissionSerializer, GradeSerializer
 
 User = get_user_model()
 
@@ -51,6 +53,9 @@ class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
     permission_classes = [IsTeacherOrReadOnly]
 
+    def get_queryset(self):
+        return Course.objects.for_user(self.request.user)
+
     def perform_create(self, serializer):
         # Optionally auto-add the logged-in teacher
         serializer.save(teachers=[self.request.user])
@@ -61,26 +66,14 @@ class LectureViewSet(viewsets.ModelViewSet):
     serializer_class = LectureSerializer
     permission_classes = [IsCourseTeacherOrReadOnly]
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = Lecture.objects.all()
-
-        if not user.is_authenticated:
-            return Lecture.objects.none()  # anonymous users can’t see lectures
-
-        if user.role == Role.TEACHER:
-            return qs.filter(course__teachers=user)
-
-        if user.role == Role.STUDENT:
-            return qs.filter(course__students=user)
-
-        return Lecture.objects.none()
-
     def perform_create(self, serializer):
         course = serializer.validated_data["course"]
         if not course.teachers.filter(id=self.request.user.id).exists():
             raise PermissionDenied("You are not a teacher in this course.")
         serializer.save()
+
+    def get_queryset(self):
+        return Lecture.objects.for_user(self.request.user)
 
 
 class HomeworkViewSet(viewsets.ModelViewSet):
@@ -94,3 +87,36 @@ class HomeworkViewSet(viewsets.ModelViewSet):
         if not course.teachers.filter(id=self.request.user.id).exists():
             raise PermissionDenied("You are not a teacher in this course.")
         serializer.save()
+
+    def get_queryset(self):
+        return Homework.objects.for_user(self.request.user)
+
+
+class HomeworkSubmissionViewSet(viewsets.ModelViewSet):
+    serializer_class = HomeworkSubmissionSerializer
+    permission_classes = [IsStudentAndEnrolled]
+
+    def get_queryset(self):
+        return HomeworkSubmission.objects.visible_to(self.request.user)
+
+    def perform_create(self, serializer):
+        if self.request.user.role != Role.STUDENT:
+            raise PermissionDenied("Only students can submit homework.")
+        serializer.save(student=self.request.user)
+
+
+class GradeViewSet(viewsets.ModelViewSet):
+    serializer_class = GradeSerializer
+    permission_classes = [permissions.IsAuthenticated, IsGradeOwnerOrCourseTeacher]
+
+    def get_queryset(self):
+        return Grade.objects.visible_to(self.request.user)
+
+    def perform_create(self, serializer):
+        if self.request.user.role != Role.TEACHER:
+            raise PermissionDenied("Only teachers can grade submissions.")
+        serializer.save(teacher=self.request.user)
+
+        def perform_update(self, serializer):
+            # also enforce teacher stays the same
+            serializer.save(teacher=self.request.user)

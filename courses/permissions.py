@@ -1,6 +1,9 @@
 # permissions.py
 from rest_framework import permissions
 
+from courses.roles import Role
+
+
 class IsTeacherOrReadOnly(permissions.BasePermission):
     """
     Teachers can edit their own courses; everyone else can only read.
@@ -29,3 +32,51 @@ class IsCourseTeacherOrReadOnly(permissions.BasePermission):
             return True
         course = getattr(obj, "course", None) or obj.lecture.course
         return request.user in course.teachers.all()
+
+
+class IsStudentAndEnrolled(permissions.BasePermission):
+    """Only students enrolled in the course can submit homework."""
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        if user.role != "student":
+            return False
+        # object here is HomeworkSubmission
+        return obj.homework.lecture.course.students.filter(id=user.id).exists()
+
+class IsTeacherOfCourse(permissions.BasePermission):
+    """Only teachers of the course can grade."""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == Role.TEACHER
+
+    def has_object_permission(self, request, view, obj):
+        return obj.submission.homework.lecture.course.teachers.filter(id=request.user.id).exists()
+
+
+class IsGradeOwnerOrCourseTeacher(permissions.BasePermission):
+    """
+    Students can only see their own grades.
+    Teachers can manage grades for submissions in their courses.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+
+        # Read-only case
+        if request.method in permissions.SAFE_METHODS:
+            if user.role == Role.STUDENT:
+                return obj.submission.student == user
+            if user.role == Role.TEACHER:
+                return user in obj.submission.homework.lecture.course.teachers.all()
+            return False
+
+        # Write/update/delete case
+        if user.role == Role.TEACHER:
+            return user in obj.submission.homework.lecture.course.teachers.all()
+
+        return False
