@@ -61,6 +61,21 @@ class LectureViewSet(viewsets.ModelViewSet):
     serializer_class = LectureSerializer
     permission_classes = [IsCourseTeacherOrReadOnly]
 
+    def get_queryset(self):
+        user = self.request.user
+        qs = Lecture.objects.all()
+
+        if not user.is_authenticated:
+            return Lecture.objects.none()  # anonymous users can’t see lectures
+
+        if user.role == Role.TEACHER:
+            return qs.filter(course__teachers=user)
+
+        if user.role == Role.STUDENT:
+            return qs.filter(course__students=user)
+
+        return Lecture.objects.none()
+
     def perform_create(self, serializer):
         course = serializer.validated_data["course"]
         if not course.teachers.filter(id=self.request.user.id).exists():
