@@ -26,6 +26,14 @@ class LectureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lecture
         fields = ["id", "course", "topic", "presentation", "created_at", "updated_at"]
+        read_only_fields = ("course",)
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        request = self.context.get("request")
+        if instance.presentation and request is not None:
+            rep["presentation"] = request.build_absolute_uri(instance.presentation.url)
+        return rep
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -50,10 +58,17 @@ class CourseSerializer(serializers.ModelSerializer):
 
 
 class HomeworkSerializer(serializers.ModelSerializer):
+    file = serializers.SerializerMethodField()
+
     class Meta:
         model = Homework
         fields = ["id", "lecture", "description", "created_at", "updated_at"]
 
+    def get_file(self, obj):
+        request = self.context.get("request")
+        if obj.file:
+            return request.build_absolute_uri(obj.file.url)
+        return None
 
 
 class HomeworkSubmissionSerializer(serializers.ModelSerializer):

@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from courses.views import RegisterView, LogoutView, UserViewSet, CourseViewSet, LectureViewSet, HomeworkViewSet, \
-    HomeworkSubmissionViewSet, GradeViewSet
+    HomeworkSubmissionViewSet, GradeViewSet, MyTeachingCoursesView, MyEnrolledCoursesView
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
@@ -19,4 +19,7 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path('', include(router.urls)),
+    path("me/teaching-courses/", MyTeachingCoursesView.as_view(), name="my-teaching-courses"),
+    path("me/enrolled-courses/", MyEnrolledCoursesView.as_view(), name="my-enrolled-courses"),
+
 ]

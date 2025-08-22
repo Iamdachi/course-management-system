@@ -8,3 +8,5 @@
 **/migrations/*.py
 endpoints
 httpie-tests
+dummy_presentations/
+media/

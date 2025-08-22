@@ -1,10 +1,10 @@
 from django.shortcuts import render
-from rest_framework import generics, status, viewsets, permissions
+from rest_framework import generics, status, viewsets, permissions, parsers
 from rest_framework.decorators import api_view, action
 from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -60,58 +60,122 @@ class CourseViewSet(viewsets.ModelViewSet):
         course = serializer.save()  # save the Course first
         course.teachers.add(self.request.user)  # then add the M2M relation
 
-    @action(detail=True, methods=["get", "post", "delete"], url_path="teachers")
-    def manage_teachers(self, request, pk=None):
+    def _manage_relation(self, relation_name, role=None):
+        """
+        Generic M2M manager for teachers or students.
+        - relation_name: str, e.g., 'teachers' or 'students'
+        - role: optional Role constant to enforce (Role.TEACHER / Role.STUDENT)
+        """
         course = self.get_object()
+        relation = getattr(course, relation_name)  # course.teachers or course.students
 
-        def get_teachers():
-            serializer = UserSerializer(course.teachers.all(), many=True)
+        def get_items():
+            serializer = UserSerializer(relation.all(), many=True)
             return Response(serializer.data)
 
-        def add_teacher():
-            self._assert_course_teacher(course)
-            user_id = request.data.get("user")
-            teacher = self._get_teacher_or_404(user_id)
-            course.teachers.add(teacher)
-            return Response({"detail": f"Teacher {teacher.username} added."}, status=201)
+        def add_item():
+            self._assert_course_teacher(course)  # only course teachers can add
+            user_id = self.request.data.get("user")
+            user = self._get_user_or_404(user_id, role)
+            relation.add(user)
+            return Response({"detail": f"{user.username} added."}, status=201)
 
-        def remove_teacher():
-            self._assert_course_teacher(course)
-            user_id = request.data.get("user")
-            teacher = self._get_teacher_or_404(user_id)
-            course.teachers.remove(teacher)
-            return Response({"detail": f"Teacher {teacher.username} removed."}, status=204)
+        def remove_item():
+            self._assert_course_teacher(course)  # only course teachers can remove
+            user_id = self.request.data.get("user")
+            user = self._get_user_or_404(user_id, role)
+            relation.remove(user)
+            return Response({"detail": f"{user.username} removed."}, status=204)
 
         dispatch = {
-            "GET": get_teachers,
-            "POST": add_teacher,
-            "DELETE": remove_teacher,
+            "GET": get_items,
+            "POST": add_item,
+            "DELETE": remove_item,
         }
 
-        handler = dispatch.get(request.method)
+        handler = dispatch.get(self.request.method)
+        if handler is None:
+            return Response({"detail": "Method not allowed."}, status=405)
         return handler()
 
-    def _get_teacher_or_404(self, user_id):
+    def _get_user_or_404(self, user_id, role=None):
         try:
-            return User.objects.get(id=user_id, role=Role.TEACHER)
+            user = User.objects.get(id=user_id)
+            if role and user.role != role:
+                raise User.DoesNotExist
+            return user
         except User.DoesNotExist:
-            raise NotFound("Teacher not found.")
+            raise NotFound(f"{role or 'User'} not found.")
 
     def _assert_course_teacher(self, course):
         if self.request.user not in course.teachers.all():
             raise PermissionDenied("You are not a teacher of this course.")
+
+    @action(detail=True, methods=["get", "post", "delete"], url_path="teachers")
+    def manage_teachers(self, request, pk=None):
+        return self._manage_relation("teachers", role=Role.TEACHER)
+
+    @action(detail=True, methods=["get", "post", "delete"], url_path="students")
+    def manage_students(self, request, pk=None):
+        return self._manage_relation("students", role=Role.STUDENT)
+
+    @action(detail=True, methods=["get", "post"], url_path="lectures")
+    def lectures(self, request, pk=None):
+        course = self.get_object()
+
+        if request.method == "GET":
+            lectures = course.lectures.all()
+            serializer = LectureSerializer(lectures, many=True)
+            return Response(serializer.data)
+
+        if request.method == "POST":
+            if request.user not in course.teachers.all():
+                return Response({"detail": "Only course teachers can add lectures."}, status=403)
+            serializer = LectureSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(course=course)
+            return Response(serializer.data, status=201)
+
+
+class MyTeachingCoursesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != Role.TEACHER:
+            return Response({"detail": "Only teachers can view teaching courses."}, status=403)
+        courses = request.user.teaching_courses.all()
+        serializer = CourseSerializer(courses, many=True)
+        return Response(serializer.data)
+
+
+class MyEnrolledCoursesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != Role.STUDENT:
+            return Response({"detail": "Only students can view enrolled courses."}, status=403)
+        courses = request.user.enrolled_courses.all()
+        serializer = CourseSerializer(courses, many=True)
+        return Response(serializer.data)
+
 
 
 class LectureViewSet(viewsets.ModelViewSet):
     queryset = Lecture.objects.all()
     serializer_class = LectureSerializer
     permission_classes = [IsCourseTeacherOrReadOnly]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
-    def perform_create(self, serializer):
-        course = serializer.validated_data["course"]
-        if not course.teachers.filter(id=self.request.user.id).exists():
-            raise PermissionDenied("You are not a teacher in this course.")
+    def perform_update(self, serializer):
+        lecture = self.get_object()
+        if self.request.user not in lecture.course.teachers.all():
+            raise PermissionDenied("Only course teachers can update lectures.")
         serializer.save()
+
+    def perform_destroy(self, instance):
+        if self.request.user not in instance.course.teachers.all():
+            raise PermissionDenied("Only course teachers can delete lectures.")
+        instance.delete()
 
     def get_queryset(self):
         return Lecture.objects.for_user(self.request.user)
