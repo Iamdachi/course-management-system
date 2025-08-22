@@ -80,3 +80,21 @@ class IsGradeOwnerOrCourseTeacher(permissions.BasePermission):
             return user in obj.submission.homework.lecture.course.teachers.all()
 
         return False
+
+
+class IsStudentOfCourseOrTeacherCanView(permissions.BasePermission):
+    """
+    - Students can create/update/delete submissions, but only for homeworks
+      in courses they are enrolled in.
+    - Teachers can only view submissions of their own courses.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+
+        if user.role == Role.TEACHER:
+            # Teacher can view only if they teach this course
+            return user in obj.lecture.course.teachers.all()
+
+        # Student can act only if enrolled in the course
+        return user in obj.lecture.course.students.all()

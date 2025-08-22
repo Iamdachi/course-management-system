@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from rest_framework import generics, status, viewsets, permissions, parsers
 from rest_framework.decorators import api_view, action
 from rest_framework.exceptions import PermissionDenied, NotFound
@@ -11,7 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Course, Role, Lecture, Homework, HomeworkSubmission, Grade
 from .permissions import IsTeacherOrReadOnly, IsCourseTeacherOrReadOnly, IsStudentAndEnrolled, IsTeacherOfCourse, \
-    IsGradeOwnerOrCourseTeacher
+    IsGradeOwnerOrCourseTeacher, IsStudentOfCourseOrTeacherCanView
 from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer, \
     HomeworkSubmissionSerializer, GradeSerializer
 
@@ -180,21 +180,83 @@ class LectureViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Lecture.objects.for_user(self.request.user)
 
+    @action(detail=True, methods=["get", "post"], url_path="homeworks")
+    def homeworks(self, request, pk=None):
+        lecture = self.get_object()
+
+        if request.method == "GET":
+            homeworks = lecture.homeworks.all()
+            serializer = HomeworkSerializer(homeworks, many=True)
+            return Response(serializer.data)
+
+        if request.method == "POST":
+            if request.user not in lecture.course.teachers.all():
+                raise PermissionDenied("Only course teachers can add homework.")
+            serializer = HomeworkSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(lecture=lecture)
+            return Response(serializer.data, status=201)
+
 
 class HomeworkViewSet(viewsets.ModelViewSet):
     queryset = Homework.objects.all()
     serializer_class = HomeworkSerializer
     permission_classes = [IsCourseTeacherOrReadOnly]
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == Role.TEACHER:
+            return Homework.objects.filter(lecture__course__teachers=user)
+        return Homework.objects.filter(lecture__course__students=user)
+
     def perform_create(self, serializer):
-        lecture = serializer.validated_data["lecture"]
-        course = lecture.course
-        if not course.teachers.filter(id=self.request.user.id).exists():
-            raise PermissionDenied("You are not a teacher in this course.")
+        lecture_id = self.kwargs["lecture_pk"]
+        lecture = get_object_or_404(Lecture, pk=lecture_id)
+
+        # Ensure only course teachers can add homework
+        if self.request.user not in lecture.course.teachers.all():
+            raise PermissionDenied("Only course teachers can add homework.")
+
+        serializer.save(lecture=lecture)
+
+    def perform_update(self, serializer):
+        homework = self.get_object()
+        if self.request.user not in homework.lecture.course.teachers.all():
+            raise PermissionDenied("Only course teachers can update homework.")
         serializer.save()
 
-    def get_queryset(self):
-        return Homework.objects.for_user(self.request.user)
+    def perform_destroy(self, instance):
+        if self.request.user not in instance.lecture.course.teachers.all():
+            raise PermissionDenied("Only course teachers can delete homework.")
+        instance.delete()
+
+    @action(detail=True, methods=["get", "post"], url_path="submissions", permission_classes=[IsStudentOfCourseOrTeacherCanView])
+    def submissions(self, request, pk=None):
+        homework = self.get_object()
+        user = request.user
+
+        # TEACHER: can only GET
+        if user.role == Role.TEACHER:
+            if user not in homework.lecture.course.teachers.all():
+                raise PermissionDenied("You are not a teacher of this course.")
+            if request.method != "GET":
+                raise PermissionDenied("Teachers cannot modify submissions.")
+            qs = homework.submissions.all()
+            serializer = HomeworkSubmissionSerializer(qs, many=True)
+            return Response(serializer.data)
+
+        # STUDENT: can CRUD only own submissions
+        submission_qs = homework.submissions.filter(student=user)
+
+        if request.method == "GET":
+            serializer = HomeworkSubmissionSerializer(submission_qs, many=True)
+            return Response(serializer.data)
+
+        elif request.method == "POST":
+            serializer = HomeworkSubmissionSerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save(student=user, homework=homework)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class HomeworkSubmissionViewSet(viewsets.ModelViewSet):
@@ -202,12 +264,44 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsStudentAndEnrolled]
 
     def get_queryset(self):
-        return HomeworkSubmission.objects.visible_to(self.request.user)
+        user = self.request.user
+        homework_pk = self.kwargs.get("homework_pk")
+
+        if homework_pk:
+            # accessed via /homeworks/{homework_pk}/submissions/
+            homework = get_object_or_404(Homework, pk=homework_pk)
+            if user.role == Role.TEACHER:
+                # teacher of this course sees all
+                return homework.submissions.all() if user in homework.lecture.course.teachers.all() else HomeworkSubmission.objects.none()
+            # student sees only their own
+            return homework.submissions.filter(student=user)
+
+        # accessed via /submissions/{submission_id}/
+        if user.role == Role.TEACHER:
+            return HomeworkSubmission.objects.filter(homework__lecture__course__teachers=user)
+        return HomeworkSubmission.objects.filter(student=user)
 
     def perform_create(self, serializer):
+        homework = get_object_or_404(Homework, pk=self.kwargs["homework_pk"])
+        user = self.request.user
+        if user.role != Role.STUDENT or user not in homework.lecture.course.students.all():
+            raise PermissionDenied("Only enrolled students can submit.")
+
+        serializer.save(student=user, homework=homework, file=self.request.FILES.get('file'))
+
+    def perform_update(self, serializer):
         if self.request.user.role != Role.STUDENT:
-            raise PermissionDenied("Only students can submit homework.")
-        serializer.save(student=self.request.user)
+            raise PermissionDenied("Only students can update submissions.")
+        if serializer.instance.student != self.request.user:
+            raise PermissionDenied("You can only update your own submissions.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if self.request.user.role != Role.STUDENT:
+            raise PermissionDenied("Only students can delete submissions.")
+        if instance.student != self.request.user:
+            raise PermissionDenied("You can only delete your own submissions.")
+        instance.delete()
 
 
 class GradeViewSet(viewsets.ModelViewSet):

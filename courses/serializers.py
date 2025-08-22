@@ -58,25 +58,19 @@ class CourseSerializer(serializers.ModelSerializer):
 
 
 class HomeworkSerializer(serializers.ModelSerializer):
-    file = serializers.SerializerMethodField()
-
     class Meta:
         model = Homework
         fields = ["id", "lecture", "description", "created_at", "updated_at"]
-
-    def get_file(self, obj):
-        request = self.context.get("request")
-        if obj.file:
-            return request.build_absolute_uri(obj.file.url)
-        return None
+        read_only_fields = ("lecture",)
 
 
 class HomeworkSubmissionSerializer(serializers.ModelSerializer):
+    file = serializers.FileField(required=False)  # allows file uploads
+
     class Meta:
         model = HomeworkSubmission
         fields = "__all__"
-        read_only_fields = ("student",)
-
+        read_only_fields = ("student", "homework")
 
 
 class GradeSerializer(serializers.ModelSerializer):

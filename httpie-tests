@@ -43,24 +43,24 @@ http -a teacher1:securepassword  -f PATCH http://localhost:8000/api/v1/lectures/
 http -a teacher1:securepassword DELETE http://localhost:8000/api/v1/lectures/cc5fe83b-bd4a-4017-bb7d-86ff4fab1d51/
 ___________________________________________________________________________________________________________________________________________-
 
-TODODOOOO
-
 HOMEWORK
 
-http -a admin:123 GET  http://localhost:8000/api/v1/lectures/{lecture_id}/homeworks/
-http -a admin:123 POST http://localhost:8000/api/v1/lectures/{lecture_id}/homeworks/ description="Solve problems 1–5"
-http -a admin:123 GET  http://localhost:8000/api/v1/homeworks/{homework_id}/
-http -a admin:123 PATCH http://localhost:8000/api/v1/homeworks/{homework_id}/ description="Updated HW text"
-http -a admin:123 DELETE http://localhost:8000/api/v1/homeworks/{homework_id}/
+http -a teacher1:securepassword GET  http://localhost:8000/api/v1/lectures/9e8fcc16-2547-4617-a757-3d4670549344/homeworks/
+http -a teacher1:securepassword -f POST http://localhost:8000/api/v1/lectures/9e8fcc16-2547-4617-a757-3d4670549344/homeworks/ description="Solve problems 1–5"
+http -a teacher1:securepassword GET  http://localhost:8000/api/v1/homeworks/9e4479ee-00e5-48c5-8b7f-676aa34cb4f1/
+http -a teacher1:securepassword PATCH http://localhost:8000/api/v1/homeworks/2212e952-d841-44cd-ab65-2773d9be43ca/ description="Updated HW text"
+http -a teacher1:securepassword DELETE http://localhost:8000/api/v1/homeworks/2212e952-d841-44cd-ab65-2773d9be43ca/
 ______________________________________________________________________________________________________________________________________________
+
+TODODOOOO
 
 HOMEWORK SUBMISSIONS
 
-http -a admin:123 GET  http://localhost:8000/api/v1/homeworks/{homework_id}/submissions/
-http -a admin:123 POST http://localhost:8000/api/v1/homeworks/{homework_id}/submissions/ content="My answers"
-http -a admin:123 GET  http://localhost:8000/api/v1/submissions/{submission_id}/
-http -a admin:123 PATCH http://localhost:8000/api/v1/submissions/{submission_id}/ content="Updated answers"
-http -a admin:123 DELETE http://localhost:8000/api/v1/submissions/{submission_id}/
+http -a teacher1:securepassword GET  http://localhost:8000/api/v1/homeworks/9e4479ee-00e5-48c5-8b7f-676aa34cb4f1/submissions/
+http -a student1:securepassword -f POST http://localhost:8000/api/v1/homeworks/9e4479ee-00e5-48c5-8b7f-676aa34cb4f1/submissions/ content="My answers with file"  file@/home/dachi/PycharmProjects/leverx-courses/dummy_presentations/solution.html
+http -a teacher1:securepassword GET  http://localhost:8000/api/v1/submissions/c7b68ea1-51b1-4f67-9461-353f61f3d621/
+http -a admin:123 PATCH http://localhost:8000/api/v1/submissions/{submission_id}/ content="Updated answers" file@/home/dachi/PycharmProjects/leverx-courses/dummy_presentations/solution.html
+http -a student1:securepassword DELETE http://localhost:8000/api/v1/submissions/3fb7a720-5bd1-4f5f-95c8-0587bb6adbd0/
 
 http -a admin:123 GET  http://localhost:8000/api/v1/me/submissions/
 ________________________________________________________________________________________________________________________

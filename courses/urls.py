@@ -13,6 +13,9 @@ router.register(r"homeworks", HomeworkViewSet)
 router.register(r'submissions', HomeworkSubmissionViewSet, basename='submission')
 router.register(r'grades', GradeViewSet, basename='grade')
 
+
+
+
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", TokenObtainPairView.as_view(), name="login"),

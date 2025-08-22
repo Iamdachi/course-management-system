@@ -63,9 +63,11 @@ class Homework(UUIDModel, TimeStampedModel):
 
 class HomeworkSubmission(UUIDModel, TimeStampedModel):
     homework = models.ForeignKey(Homework, on_delete=models.CASCADE, related_name="submissions")
-    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="homework_submissions", limit_choices_to={"role": Role.STUDENT})
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="submissions", limit_choices_to={"role": Role.STUDENT})
     content = models.TextField()
-    file = models.FileField(upload_to="homework_submissions/", blank=True, null=True)
+    file = models.FileField(upload_to="submissions/", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = HomeworkSubmissionQuerySet.as_manager()
 
