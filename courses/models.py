@@ -23,8 +23,6 @@ class UUIDModel(models.Model):
         abstract = True
 
 
-
-
 class User(AbstractUser, UUIDModel):
     REQUIRED_FIELDS = ['role', 'email']
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.STUDENT)

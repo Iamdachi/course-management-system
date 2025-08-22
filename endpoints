@@ -1,0 +1,60 @@
+POST /auth/register
+POST /auth/login
+POST /auth/refresh
+GET /users/me - user profile
+PATCH /users/me - update email, passwd
+
+GET /courses  - list available courses.
+    ?teacher=id &student=id &search=title
+POST /courses  - create course (Teacher)
+GET /courses/{course_id}  - retrieve (all users)
+PATCH /courses/{course_id}  - update (Teacher in course)
+DELETE /courses/{course_id}  - delete (Teacher in course / Admin)
+
+GET /courses/{course_id}/teachers  - list teachers
+POST /courses/{course_id}/teachers/  -  add teacher {"user" : "<uuid>"}
+DELETE /courses/{course_id}/teachers/{user_id}/  -  remove teacher
+GET /courses/{course_id}/students/  -  list enrolled students
+POST /courses/{course_id}/students/  -  add student { "user": "<uuid>" }
+DELETE /courses/{course_id}/students/{user_id}  -  remove student
+
+GET /me/teaching-courses/ — teacher’s courses
+GET /me/enrolled-courses/ — student’s courses
+
+GET /courses/{course_id}/lectures/ — list (Students, Teachers in course).
+POST /courses/{course_id}/lectures/ - create (Teacher in course) multipart: topic, optional presentation file.
+GET /lectures/{lecture_id}/ — retrieve
+PATCH /lectures/{lecture_id}/ — update (Teacher in course)
+DELETE /lectures/{lecture_id}/ — delete (Teacher in course)
+
+
+GET /lectures/{lecture_id}/homeworks/ — list.
+POST /lectures/{lecture_id}/homeworks/ — create (Teacher in course).
+GET /homeworks/{homework_id}/ — retrieve.
+PATCH /homeworks/{homework_id}/ — update (Teacher in course).
+DELETE /homeworks/{homework_id}/ — delete (Teacher in course).
+
+GET /homeworks/{homework_id}/submissions/ — list submissions (Teachers in course).Filters: ?student=<user_id>
+POST /homeworks/{homework_id}/submissions/ — create (Student enrolled). fields: content, optional file (multipart).
+GET /submissions/{submission_id}/ — retrieve (owner student + course teachers).
+PATCH /submissions/{submission_id}/ — update (owner student; typically allowed until graded).
+DELETE /submissions/{submission_id}/ — delete (owner student before graded / Teacher optionally).
+
+GET /me/submissions/ — student’s own submissions. Filters: ?homework=<id>&course=<id>&lecture=<id>
+
+GET /submissions/{submission_id}/grades/ — list (owner student + course teachers).
+POST /submissions/{submission_id}/grades/ — create/assign grade (Teacher in course).
+fields: value (0–100), feedback.
+GET /grades/{grade_id}/ — retrieve.
+PATCH /grades/{grade_id}/ — update (Teacher who gave it or any teacher in course, per your policy).
+DELETE /grades/{grade_id}/ — delete (Teacher in course/Admin).
+
+GET /grades/{grade_id}/comments/ — list (student owner + course teachers).
+POST /grades/{grade_id}/comments/ — add comment (Student owner or any course teacher). fields: content
+GET /grade-comments/{comment_id}/ — retrieve.
+PATCH /grade-comments/{comment_id}/ — edit (author only).
+DELETE /grade-comments/{comment_id}/ — delete (author/teacher/admin per policy).
+
+
+GET /schema/ — OpenAPI JSON/YAML.
+GET /docs/ — Swagger/Redoc UI.

@@ -1,0 +1,26 @@
+
+COURSES:
+http -a teacher1:securepassword GET  http://localhost:8000/api/v1/courses/
+http GET  http://localhost:8000/api/v1/courses/
+
+http -a teacher1:securepassword POST http://localhost:8000/api/v1/courses/     title="Math 101"     description="Intro course"
+
+http -a teacher1:securepassword POST http://localhost:8000/api/v1/courses/ \
+    title="Chemistry 101" \
+    description="Basics of Chemistry" \
+    teachers:='["teacher2"]'
+
+http -a teacher1:securepassword GET  http://localhost:8000/api/v1/courses/4160606f-ff40-4d84-97ae-fa2dce3580cc/
+http -a teacher1:securepassword PATCH http://localhost:8000/api/v1/courses/4160606f-ff40-4d84-97ae-fa2dce3580cc/ title="Updated Math 101"
+http -a teacher1:securepassword DELETE http://localhost:8000/api/v1/courses/4160606f-ff40-4d84-97ae-fa2dce3580cc/
+___________________________________________________________________________
+
+COURSE MEMBERSHIP:
+
+http -a teacher1:securepassword GET  http://localhost:8000/api/v1/courses/{course_id}/teachers/
+http -a teacher1:securepassword POST http://localhost:8000/api/v1/courses/{course_id}/teachers/ user="{teacher_uuid}"
+http -a teacher1:securepassword DELETE http://localhost:8000/api/v1/courses/{course_id}/teachers/{teacher_uuid}/
+
+http -a admin:123 GET  http://localhost:8000/api/v1/courses/{course_id}/students/
+http -a admin:123 POST http://localhost:8000/api/v1/courses/{course_id}/students/ user="{student_uuid}"
+http -a admin:123 DELETE http://localhost:8000/api/v1/courses/{course_id}/students/{student_uuid}/

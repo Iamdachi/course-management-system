@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, status, viewsets, permissions
 from rest_framework.decorators import api_view, action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import AllowAny
@@ -57,8 +57,43 @@ class CourseViewSet(viewsets.ModelViewSet):
         return Course.objects.for_user(self.request.user)
 
     def perform_create(self, serializer):
-        # Optionally auto-add the logged-in teacher
-        serializer.save(teachers=[self.request.user])
+        course = serializer.save()  # save the Course first
+        course.teachers.add(self.request.user)  # then add the M2M relation
+
+    @action(detail=True, methods=["get", "post", "delete"], url_path="teachers")
+    def manage_teachers(self, request, pk=None):
+        course = self.get_object()
+
+        def get_teachers():
+            serializer = UserSerializer(course.teachers.all(), many=True)
+            return Response(serializer.data)
+
+        def add_teacher():
+            user_id = request.data.get("user")
+            teacher = self._get_teacher_or_404(user_id)
+            course.teachers.add(teacher)
+            return Response({"detail": f"Teacher {teacher.username} added."}, status=201)
+
+        def remove_teacher():
+            user_id = request.data.get("user")
+            teacher = self._get_teacher_or_404(user_id)
+            course.teachers.remove(teacher)
+            return Response({"detail": f"Teacher {teacher.username} removed."}, status=204)
+
+        dispatch = {
+            "GET": get_teachers,
+            "POST": add_teacher,
+            "DELETE": remove_teacher,
+        }
+
+        handler = dispatch.get(request.method)
+        return handler()
+
+    def _get_teacher_or_404(self, user_id):
+        try:
+            return User.objects.get(id=user_id, role=Role.TEACHER)
+        except User.DoesNotExist:
+            raise NotFound("Teacher not found.")
 
 
 class LectureViewSet(viewsets.ModelViewSet):

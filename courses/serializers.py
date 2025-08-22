@@ -27,20 +27,14 @@ class LectureSerializer(serializers.ModelSerializer):
         model = Lecture
         fields = ["id", "course", "topic", "presentation", "created_at", "updated_at"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        user = self.context["request"].user
-        # Restrict the course choices in the browsable form
-        self.fields["course"].queryset = Course.objects.filter(teachers=user)
-
-
 
 class CourseSerializer(serializers.ModelSerializer):
     # Show teachers and students as read-only usernames
     teachers = serializers.SlugRelatedField(
         many=True,
         slug_field='username',
-        queryset=User.objects.filter(role=Role.TEACHER)
+        queryset=User.objects.filter(role=Role.TEACHER),
+        required = False
     )
     students = serializers.SlugRelatedField(
         many=True,
@@ -60,11 +54,6 @@ class HomeworkSerializer(serializers.ModelSerializer):
         model = Homework
         fields = ["id", "lecture", "description", "created_at", "updated_at"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        user = self.context["request"].user
-        # Restrict lecture choices to lectures in user's own courses
-        self.fields["lecture"].queryset = Lecture.objects.filter(course__teachers=user)
 
 
 class HomeworkSubmissionSerializer(serializers.ModelSerializer):
@@ -73,25 +62,6 @@ class HomeworkSubmissionSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ("student",)
 
-    def validate_homework(self, homework):
-        user = self.context["request"].user
-        # Ensure student is enrolled in course of the homework
-        course = homework.lecture.course
-        if not course.students.filter(id=user.id).exists():
-            raise serializers.ValidationError("You are not enrolled in this course.")
-        return homework
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        user = self.context['request'].user
-
-        if user.role == Role.STUDENT:
-            # Students: only homeworks in their courses
-            self.fields['homework'].queryset = Homework.objects.filter(
-                lecture__course__students=user
-            )
-        else:
-            self.fields['homework'].queryset = Homework.objects.none() # only let students see valid homework choices
 
 
 class GradeSerializer(serializers.ModelSerializer):
@@ -102,18 +72,6 @@ class GradeSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["teacher", "created", "modified"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        user = self.context["request"].user
-
-        if user.role == Role.TEACHER:
-            # Teachers can only grade submissions from their own courses
-            self.fields["submission"].queryset = HomeworkSubmission.objects.filter(
-                homework__lecture__course__teachers=user
-            )
-        else:
-            # Students (or others) should not be able to grade at all
-            self.fields["submission"].queryset = HomeworkSubmission.objects.none()
 
 
 class GradeCommentSerializer(serializers.ModelSerializer):
