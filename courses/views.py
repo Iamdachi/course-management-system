@@ -15,13 +15,12 @@ from .serializers import UserSerializer, CourseSerializer, LectureSerializer, Ho
 
 User = get_user_model()
 
-# ---------- Registration ----------
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
-# ---------- Logout ----------
 class LogoutView(APIView):
     permission_classes = [AllowAny]
 
@@ -35,16 +34,12 @@ class LogoutView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-# -------------------
-# User ViewSet
-# -------------------
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-# -------------------
-# API Root
-# -------------------
+
 @api_view(['GET'])
 def api_root(request, format=None):
     return Response({
