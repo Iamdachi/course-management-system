@@ -5,7 +5,6 @@ from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
 
-# ---------- Base ----------
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -21,7 +20,6 @@ class UUIDModel(models.Model):
         abstract = True
 
 
-# ---------- Users ----------
 class Role(models.TextChoices):
     TEACHER = "teacher", _("Teacher")
     STUDENT = "student", _("Student")
@@ -32,8 +30,7 @@ class User(AbstractUser, UUIDModel):
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.STUDENT)
 
 
-# ---------- Courses & Lectures ----------
-class Course(UUIDModel, TimeStampedModel):
++class Course(UUIDModel, TimeStampedModel):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     teachers = models.ManyToManyField(User, related_name="teaching_courses", limit_choices_to={"role": Role.TEACHER})
@@ -52,7 +49,6 @@ class Lecture(UUIDModel, TimeStampedModel):
         return f"{self.course.title} - {self.topic}"
 
 
-# ---------- Homework & Grades ----------
 class Homework(UUIDModel, TimeStampedModel):
     lecture = models.ForeignKey(Lecture, on_delete=models.CASCADE, related_name="homeworks")
     description = models.TextField()
