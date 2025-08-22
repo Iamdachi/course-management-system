@@ -69,12 +69,14 @@ class CourseViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
         def add_teacher():
+            self._assert_course_teacher(course)
             user_id = request.data.get("user")
             teacher = self._get_teacher_or_404(user_id)
             course.teachers.add(teacher)
             return Response({"detail": f"Teacher {teacher.username} added."}, status=201)
 
         def remove_teacher():
+            self._assert_course_teacher(course)
             user_id = request.data.get("user")
             teacher = self._get_teacher_or_404(user_id)
             course.teachers.remove(teacher)
@@ -94,6 +96,10 @@ class CourseViewSet(viewsets.ModelViewSet):
             return User.objects.get(id=user_id, role=Role.TEACHER)
         except User.DoesNotExist:
             raise NotFound("Teacher not found.")
+
+    def _assert_course_teacher(self, course):
+        if self.request.user not in course.teachers.all():
+            raise PermissionDenied("You are not a teacher of this course.")
 
 
 class LectureViewSet(viewsets.ModelViewSet):
