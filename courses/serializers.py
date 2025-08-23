@@ -82,7 +82,6 @@ class GradeSerializer(serializers.ModelSerializer):
         read_only_fields = ["teacher", "created", "modified", "submission"]
 
 
-
 class GradeCommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = GradeComment
