@@ -6,8 +6,8 @@
 **.env
 **/migrations/__pycache__/
 **/migrations/*.py
-endpoints
-httpie-tests
+docs/endpoints
+docs/httpie-tests
 dummy_presentations/
 media/
 presentations/
