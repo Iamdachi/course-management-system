@@ -4,7 +4,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
-from .querysets import LectureQuerySet, HomeworkQuerySet, CourseQuerySet, HomeworkSubmissionQuerySet, GradeQuerySet
+from .querysets import LectureQuerySet, HomeworkQuerySet, CourseQuerySet, HomeworkSubmissionQuerySet, GradeQuerySet, \
+    GradeCommentQuerySet
 from .roles import Role
 
 
@@ -89,3 +90,5 @@ class GradeComment(UUIDModel, TimeStampedModel):
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name="comments")
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="grade_comments")
     content = models.TextField()
+
+    objects = GradeCommentQuerySet.as_manager()

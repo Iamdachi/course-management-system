@@ -79,7 +79,7 @@ class GradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Grade
         fields = "__all__"
-        read_only_fields = ["teacher", "created", "modified"]
+        read_only_fields = ["teacher", "created", "modified", "submission"]
 
 
 
@@ -87,3 +87,4 @@ class GradeCommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = GradeComment
         fields = "__all__"
+        read_only_fields = ("author", "grade", "created_at")

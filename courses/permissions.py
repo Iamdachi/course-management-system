@@ -1,5 +1,6 @@
 # permissions.py
 from rest_framework import permissions
+from rest_framework.permissions import SAFE_METHODS
 
 from courses.roles import Role
 
@@ -98,3 +99,60 @@ class IsStudentOfCourseOrTeacherCanView(permissions.BasePermission):
 
         # Student can act only if enrolled in the course
         return user in obj.lecture.course.students.all()
+
+
+class CanAccessSubmissions(permissions.BasePermission):
+    """
+    - GET: teachers of the course OR students enrolled in the course.
+    - POST: only students enrolled in the course.
+    """
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not user.is_authenticated:
+            return False
+
+        # homework is tied to the view (detail=True action)
+        homework = view.get_object()
+        course = homework.lecture.course
+
+        if request.method in SAFE_METHODS:  # GET, HEAD, OPTIONS
+            if user.role == Role.TEACHER:
+                return course.teachers.filter(id=user.id).exists()
+            if user.role == Role.STUDENT:
+                return course.students.filter(id=user.id).exists()
+            return False
+
+        if request.method == "POST":
+            return (
+                user.role == Role.STUDENT
+                and course.students.filter(id=user.id).exists()
+            )
+
+        return False
+
+class CanGradeCourse(permissions.BasePermission):
+    """
+    Only teachers of the submission's course can POST grades.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.role != Role.TEACHER:
+            return False
+        # obj is HomeworkSubmission
+        return obj.homework.lecture.course.teachers.filter(id=request.user.id).exists()
+
+
+class CanCommentOnGrade(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+
+        # Student who owns the submission
+        if obj.submission.student == user:
+            return True
+
+        # Any teacher of the course the submission belongs to
+        if obj.submission.homework.lecture.course.teachers.filter(id=user.id).exists():
+            return True
+
+        return False

@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from rest_framework import generics, status, viewsets, permissions, parsers
 from rest_framework.decorators import api_view, action
 from rest_framework.exceptions import PermissionDenied, NotFound
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -9,11 +10,13 @@ from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Course, Role, Lecture, Homework, HomeworkSubmission, Grade
+from mixins import PostPutBlockedMixin
+from .models import Course, Role, Lecture, Homework, HomeworkSubmission, Grade, GradeComment
 from .permissions import IsTeacherOrReadOnly, IsCourseTeacherOrReadOnly, IsStudentAndEnrolled, IsTeacherOfCourse, \
-    IsGradeOwnerOrCourseTeacher, IsStudentOfCourseOrTeacherCanView
+    IsGradeOwnerOrCourseTeacher, IsStudentOfCourseOrTeacherCanView, CanAccessSubmissions, CanGradeCourse, \
+    CanCommentOnGrade
 from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer, \
-    HomeworkSubmissionSerializer, GradeSerializer
+    HomeworkSubmissionSerializer, GradeSerializer, GradeCommentSerializer
 
 User = get_user_model()
 
@@ -152,12 +155,11 @@ class MyEnrolledCoursesView(APIView):
         return Response(serializer.data)
 
 
-class LectureViewSet(viewsets.ModelViewSet):
-    http_method_names = ['get', 'patch', 'put', 'delete']
+class LectureViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
     queryset = Lecture.objects.all()
     serializer_class = LectureSerializer
     permission_classes = [IsCourseTeacherOrReadOnly]
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+    parser_classes = [parsers.JSONParser, parsers.MultiPartParser, parsers.FormParser]
 
     def get_queryset(self):
         return Lecture.objects.for_user(self.request.user)
@@ -180,8 +182,8 @@ class LectureViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=201)
 
 
-class HomeworkViewSet(viewsets.ModelViewSet):
-    http_method_names = ['get', 'patch', 'put', 'delete']
+class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
+    http_method_names = ['get', 'patch', 'post', 'delete']
     queryset = Homework.objects.all()
     serializer_class = HomeworkSerializer
     permission_classes = [IsCourseTeacherOrReadOnly]
@@ -191,6 +193,11 @@ class HomeworkViewSet(viewsets.ModelViewSet):
         if user.role == Role.TEACHER:
             return Homework.objects.filter(lecture__course__teachers=user)
         return Homework.objects.filter(lecture__course__students=user)
+
+    def get_permissions(self):
+        if self.action == "submissions":
+            return [CanAccessSubmissions()]
+        return super().get_permissions()
 
     @action(detail=True, methods=["get", "post"], url_path="submissions")
     def submissions(self, request, pk=None):
@@ -204,12 +211,14 @@ class HomeworkViewSet(viewsets.ModelViewSet):
         if request.method == "POST":
             serializer = HomeworkSubmissionSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save(homework=homework)
+            serializer.save(
+                homework=homework,
+                student=request.user  # attach the authenticated student
+            )
             return Response(serializer.data, status=201)
 
 
-class HomeworkSubmissionViewSet(viewsets.ModelViewSet):
-    http_method_names = ['get', 'patch', 'put', 'delete']
+class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
     serializer_class = HomeworkSubmissionSerializer
     permission_classes = [IsStudentAndEnrolled]
 
@@ -219,8 +228,14 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet):
             return HomeworkSubmission.objects.filter(homework__lecture__course__teachers=user)
         return HomeworkSubmission.objects.filter(student=user)
 
+
+    def get_permissions(self):
+        if self.action == "grades" and self.request.method == "POST":
+            return [CanGradeCourse()]
+        return super().get_permissions()
+
     @action(detail=True, methods=["get", "post"], url_path="grades")
-    def submissions(self, request, pk=None):
+    def grades(self, request, pk=None):
         submission = self.get_object()
 
         if request.method == "GET":
@@ -231,20 +246,84 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet):
         if request.method == "POST":
             serializer = GradeSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save(submission=submission)
+            serializer.save(submission=submission, teacher=request.user)
             return Response(serializer.data, status=201)
 
 
 class GradeViewSet(viewsets.ModelViewSet):
-    http_method_names = ['get', 'patch', 'put', 'delete']
     serializer_class = GradeSerializer
     permission_classes = [permissions.IsAuthenticated, IsGradeOwnerOrCourseTeacher]
 
     def get_queryset(self):
-        return Grade.objects.visible_to(self.request.user)
+        return Grade.objects.for_user(self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(teacher=self.request.user) # sets teacher
 
     def perform_update(self, serializer):
         serializer.save(teacher=self.request.user) # also enforce teacher stays the same
+
+    @action(detail=True, methods=["get", "post"], url_path="comments", permission_classes=[CanCommentOnGrade])
+    def comments(self, request, pk=None):
+        grade = self.get_object()
+
+        if request.method == "GET":
+            comments = grade.comments.all()
+            serializer = GradeCommentSerializer(comments, many=True)
+            return Response(serializer.data)
+
+        if request.method == "POST":
+            serializer = GradeCommentSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(grade=grade, author=request.user)
+            return Response(serializer.data, status=201)
+
+
+class GradeCommentViewSet(viewsets.ModelViewSet):
+    http_method_names = ['get', 'patch', 'put', 'delete']
+    queryset = GradeComment.objects.all()
+    serializer_class = GradeCommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    def get_queryset(self):
+        user = self.request.user
+        # Teacher can see all comments on their course’s grades, students see their own
+        return GradeComment.objects.for_user(user)
+
+
+class MySubmissionsView(ListAPIView):
+    serializer_class = HomeworkSubmissionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = HomeworkSubmission.objects.all()
+
+        if user.role == Role.STUDENT:
+            # Students → only their own submissions
+            qs = qs.filter(student=user)
+
+        elif user.role == Role.TEACHER:
+            # Teachers → submissions from their courses
+            qs = qs.filter(homework__lecture__course__teachers=user)
+
+        else:
+            # Other roles (e.g. admin) → nothing, or you could allow full access
+            return HomeworkSubmission.objects.none()
+
+        # Optional filters
+        homework_id = self.request.query_params.get("homework")
+        course_id = self.request.query_params.get("course")
+        lecture_id = self.request.query_params.get("lecture")
+
+        if homework_id:
+            qs = qs.filter(homework_id=homework_id)
+        if lecture_id:
+            qs = qs.filter(homework__lecture_id=lecture_id)
+        if course_id:
+            qs = qs.filter(homework__lecture__course_id=course_id)
+
+        return qs

@@ -78,3 +78,17 @@ class GradeQuerySet(models.QuerySet):
         if user.role == Role.STUDENT:
             return self.filter(submission__student=user)
         return self.none()
+
+class GradeCommentQuerySet(models.QuerySet):
+    """ Return grade comments visible to the given user.
+        Students see comments on their grades. Teacher sees comments in their course.
+    """
+
+    def for_user(self, user):
+        if user.is_anonymous:
+            return self.none()
+        if user.role == Role.TEACHER:
+            return self.filter(grade__submission__homework__lecture__course__teachers=user)
+        if user.role == Role.STUDENT:
+            return self.filter(grade__submission__student=user)
+        return self.none()
