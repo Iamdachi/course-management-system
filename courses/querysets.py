@@ -4,6 +4,7 @@ from .roles import Role
 
 
 class CourseQuerySet(models.QuerySet):
+    """ Return courses visible to the given user. """
     def for_user(self, user):
         if user.is_anonymous:
             return self.none()
@@ -18,6 +19,7 @@ class CourseQuerySet(models.QuerySet):
 
 
 class UserFilteredQuerySet(models.QuerySet):
+    """ Return courses visible to the given user through a FK (Lecture->Course). """
     def for_user(self, user):
         if user.is_anonymous:
             return self.none()
@@ -36,6 +38,7 @@ class LectureQuerySet(UserFilteredQuerySet):
 
 
 class HomeworkQuerySet(UserFilteredQuerySet):
+    """ Return courses visible to the given user through FKs (Homework->Lecture->Course). """
     def for_user(self, user):
         if user.is_anonymous:
             return self.none()
@@ -50,7 +53,11 @@ class HomeworkQuerySet(UserFilteredQuerySet):
 
 
 class HomeworkSubmissionQuerySet(models.QuerySet):
-    def visible_to(self, user):
+    """
+    Return submissions visible to the given user through FKs (HomeworkSubmission->Homework->Lecture->Course).
+    Teacher sees submissions in their course. Student sees only their submissions.
+    """
+    def for_user(self, user):
         if user.role == Role.TEACHER:
             return self.filter(homework__lecture__course__teachers=user)
         elif user.role == Role.STUDENT:
@@ -59,7 +66,11 @@ class HomeworkSubmissionQuerySet(models.QuerySet):
 
 
 class GradeQuerySet(models.QuerySet):
-    def visible_to(self, user):
+    """
+        Return grades visible to the given user through FKs (HomeworkSubmission->Homework->Lecture->Course).
+        Teacher sees grades in their course. Student sees only their grades.
+    """
+    def for_user(self, user):
         if user.is_anonymous:
             return self.none()
         if user.role == Role.TEACHER:

@@ -37,10 +37,10 @@ http -a teacher1:securepassword GET  http://localhost:8000/api/v1/courses/5738f9
 http -a teacher1:securepassword POST http://localhost:8000/api/v1/courses/5738f9bc-3e6a-4a43-ac33-d7eccbf2bbb8/lectures/ topic="Algebra CREATED"
 http -a teacher1:securepassword -f POST http://localhost:8000/api/v1/courses/5738f9bc-3e6a-4a43-ac33-d7eccbf2bbb8/lectures/   topic="Algebra CREATED with file"   presentation@/home/dachi/PycharmProjects/leverx-courses/dummy_presentations/presentation.html
 
-http -a teacher1:securepassword GET  http://localhost:8000/api/v1/lectures/cc5fe83b-bd4a-4017-bb7d-86ff4fab1d51/
+http -a teacher1:securepassword GET  http://localhost:8000/api/v1/lectures/e03d85b1-91c6-4ad6-a40d-3bc5f4b04c82/
 http -a teacher1:securepassword PATCH http://localhost:8000/api/v1/lectures/cc5fe83b-bd4a-4017-bb7d-86ff4fab1d51/ topic="Updated Algebra"
 http -a teacher1:securepassword  -f PATCH http://localhost:8000/api/v1/lectures/cc5fe83b-bd4a-4017-bb7d-86ff4fab1d51/ topic="Updated Algebraaaaa"    presentation@/home/dachi/PycharmProjects/leverx-courses/dummy_presentations/presentation.html
-http -a teacher1:securepassword DELETE http://localhost:8000/api/v1/lectures/cc5fe83b-bd4a-4017-bb7d-86ff4fab1d51/
+http -a teacher2:securepassword DELETE http://localhost:8000/api/v1/lectures/e03d85b1-91c6-4ad6-a40d-3bc5f4b04c82/
 ___________________________________________________________________________________________________________________________________________-
 
 HOMEWORK
@@ -52,8 +52,6 @@ http -a teacher1:securepassword PATCH http://localhost:8000/api/v1/homeworks/221
 http -a teacher1:securepassword DELETE http://localhost:8000/api/v1/homeworks/2212e952-d841-44cd-ab65-2773d9be43ca/
 ______________________________________________________________________________________________________________________________________________
 
-TODODOOOO
-
 HOMEWORK SUBMISSIONS
 
 http -a teacher1:securepassword GET  http://localhost:8000/api/v1/homeworks/9e4479ee-00e5-48c5-8b7f-676aa34cb4f1/submissions/
@@ -62,8 +60,11 @@ http -a teacher1:securepassword GET  http://localhost:8000/api/v1/submissions/c7
 http -a admin:123 PATCH http://localhost:8000/api/v1/submissions/{submission_id}/ content="Updated answers" file@/home/dachi/PycharmProjects/leverx-courses/dummy_presentations/solution.html
 http -a student1:securepassword DELETE http://localhost:8000/api/v1/submissions/3fb7a720-5bd1-4f5f-95c8-0587bb6adbd0/
 
+
+TODODOOOO
 http -a admin:123 GET  http://localhost:8000/api/v1/me/submissions/
 ________________________________________________________________________________________________________________________
+
 
 GRADES
 http -a admin:123 GET  http://localhost:8000/api/v1/submissions/{submission_id}/grades/

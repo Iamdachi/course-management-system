@@ -36,7 +36,6 @@ class LogoutView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -58,7 +57,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         course = serializer.save()  # save the Course first
-        course.teachers.add(self.request.user)  # then add the M2M relation
+        course.teachers.add(self.request.user)  # auto-adds creator as teacher (M2M)
 
     def _manage_relation(self, relation_name, role=None):
         """
@@ -165,17 +164,6 @@ class LectureViewSet(viewsets.ModelViewSet):
     serializer_class = LectureSerializer
     permission_classes = [IsCourseTeacherOrReadOnly]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
-
-    def perform_update(self, serializer):
-        lecture = self.get_object()
-        if self.request.user not in lecture.course.teachers.all():
-            raise PermissionDenied("Only course teachers can update lectures.")
-        serializer.save()
-
-    def perform_destroy(self, instance):
-        if self.request.user not in instance.course.teachers.all():
-            raise PermissionDenied("Only course teachers can delete lectures.")
-        instance.delete()
 
     def get_queryset(self):
         return Lecture.objects.for_user(self.request.user)
