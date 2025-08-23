@@ -1,19 +1,17 @@
-from django.shortcuts import render, get_object_or_404
 from rest_framework import generics, status, viewsets, permissions, parsers
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from mixins import PostPutBlockedMixin
+from courses.mixins import PostPutBlockedMixin
 from .models import Course, Role, Lecture, Homework, HomeworkSubmission, Grade, GradeComment
-from .permissions import IsTeacherOrReadOnly, IsCourseTeacherOrReadOnly, IsStudentAndEnrolled, IsTeacherOfCourse, \
-    IsGradeOwnerOrCourseTeacher, IsStudentOfCourseOrTeacherCanView, CanAccessSubmissions, CanGradeCourse, \
+from .permissions import IsTeacherOrReadOnly, IsCourseTeacherOrReadOnly, IsStudentAndEnrolled, \
+    IsGradeOwnerOrCourseTeacher, CanAccessSubmissions, CanGradeCourse, \
     CanCommentOnGrade
 from .serializers import UserSerializer, CourseSerializer, LectureSerializer, HomeworkSerializer, \
     HomeworkSubmissionSerializer, GradeSerializer, GradeCommentSerializer
