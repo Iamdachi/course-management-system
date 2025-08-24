@@ -26,7 +26,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "fallback-insecure-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'courses',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular'
 ]
 
 MIDDLEWARE = [
@@ -135,7 +136,8 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication", # This is for browsable API login
         "rest_framework.authentication.BasicAuthentication",
-    )
+    ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 SIMPLE_JWT = {
@@ -144,3 +146,8 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
 }
 
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'LeverX Course Management System API',
+    'DESCRIPTION': 'REST API for managing courses, lectures, homework, submissions, grades, and comments.',
+    'VERSION': '1.0.0',
+}
