@@ -9,5 +9,8 @@ dependencies = [
     "djangorestframework-simplejwt>=5.5.1",
     "drf-spectacular>=0.28.0",
     "drf-yasg>=1.21.10",
+    "factory-boy>=3.3.3",
     "httpie>=3.2.4",
+    "pytest>=8.4.1",
+    "pytest-django>=4.11.1",
 ]
