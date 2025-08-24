@@ -65,7 +65,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class CourseViewSet(viewsets.ModelViewSet):
-    queryset = Course.objects.all()
+    queryset = Course.objects.all().prefetch_related("teachers", "students")
     serializer_class = CourseSerializer
     permission_classes = [IsTeacherOrReadOnly]
 
@@ -124,8 +124,8 @@ class CourseViewSet(viewsets.ModelViewSet):
             raise NotFound(f"{role or 'User'} not found.")
 
     def _assert_course_teacher(self, course):
-        if self.request.user not in course.teachers.all():
-            raise PermissionDenied("You are not a teacher of this course.")
+        if not course.teachers.filter(id=self.request.user.id).exists():
+            raise PermissionDenied("You are not a teacher in this course.")
 
     @action(detail=True, methods=["get", "post", "delete"], url_path="teachers")
     def manage_teachers(self, request, pk=None):
@@ -140,7 +140,12 @@ class CourseViewSet(viewsets.ModelViewSet):
         course = self.get_object()
 
         if request.method == "GET":
-            lectures = course.lectures.all()
+            lectures = (
+                course.lectures
+                .select_related("course")
+                .prefetch_related("homeworks")
+                .prefetch_related("course__teachers", "course__students")
+            )
             serializer = LectureSerializer(lectures, many=True)
             return Response(serializer.data)
 
@@ -195,7 +200,11 @@ class LectureViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
         lecture = self.get_object()
 
         if request.method == "GET":
-            homeworks = lecture.homeworks.all()
+            homeworks = (
+                lecture.homeworks
+                .select_related("lecture__course")
+                .prefetch_related("submissions")
+            )
             serializer = HomeworkSerializer(homeworks, many=True)
             return Response(serializer.data)
 
@@ -230,7 +239,11 @@ class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
         homework = self.get_object()
 
         if request.method == "GET":
-            submissions = homework.submissions.all()
+            submissions = (
+                homework.submissions
+                .select_related("student", "homework__lecture__course")  # FKs
+                .prefetch_related("grade_set")  # reverse
+            )
             serializer = HomeworkSubmissionSerializer(submissions, many=True)
             return Response(serializer.data)
 
@@ -263,10 +276,15 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
 
     @action(detail=True, methods=["get", "post"], url_path="grades")
     def grades(self, request, pk=None):
-        submission = self.get_object()
+        submission = (
+            self.get_queryset()
+            .select_related("homework__lecture__course")
+            .prefetch_related("grades__comments")  # if GradeComment has FK to Grade
+            .get(pk=pk)
+        )
 
         if request.method == "GET":
-            grades = submission.grades.all()
+            grades = submission.grades.select_related("teacher").all()
             serializer = GradeSerializer(grades, many=True)
             return Response(serializer.data)
 
@@ -299,7 +317,12 @@ class GradeViewSet(viewsets.ModelViewSet):
         permission_classes=[CanCommentOnGrade],
     )
     def comments(self, request, pk=None):
-        grade = self.get_object()
+        grade = (
+            self.get_queryset()
+            .select_related("submission__homework__lecture__course", "teacher")
+            .prefetch_related("comments__author")
+            .get(pk=pk)
+        )
 
         if request.method == "GET":
             comments = grade.comments.all()
