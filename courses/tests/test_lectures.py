@@ -2,7 +2,13 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from .factories import TeacherFactory, StudentFactory, CourseFactory, LectureFactory, HomeworkFactory
+from .factories import (
+    TeacherFactory,
+    StudentFactory,
+    CourseFactory,
+    LectureFactory,
+    HomeworkFactory,
+)
 
 
 @pytest.mark.django_db
@@ -41,7 +47,7 @@ def test_teacher_can_create_lecture(api_client, teacher):
     url = reverse("course-lectures", args=[course.id])  # nested route
     resp = api_client.post(
         url,
-        {"topic": "Intro Lecture"},   # only topic
+        {"topic": "Intro Lecture"},  # only topic
         format="json",
     )
 

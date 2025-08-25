@@ -7,6 +7,7 @@ from ..roles import Role
 
 User = get_user_model()
 
+
 class BaseUserFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = User

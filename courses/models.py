@@ -16,6 +16,8 @@ from .roles import Role
 
 
 class TimeStampedModel(models.Model):
+    """Abstract model adding created_at and updated_at timestamps."""
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -25,6 +27,8 @@ class TimeStampedModel(models.Model):
 
 
 class UUIDModel(models.Model):
+    """Abstract model providing a UUID primary key."""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     class Meta:
@@ -32,14 +36,19 @@ class UUIDModel(models.Model):
 
 
 class User(AbstractUser, UUIDModel):
+    """Custom user model with role field (student or teacher)."""
+
     REQUIRED_FIELDS = ["role", "email"]
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.STUDENT)
 
     def __str__(self):
+        """Return user's email and role display."""
         return f"{self.email} ({self.get_role_display()})"
 
 
 class Course(UUIDModel, TimeStampedModel):
+    """Represents a course with teachers and enrolled students."""
+
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, default="")
     teachers = models.ManyToManyField(
@@ -55,10 +64,13 @@ class Course(UUIDModel, TimeStampedModel):
     objects = CourseQuerySet.as_manager()
 
     def __str__(self):
+        """Return the course title."""
         return self.title
 
 
 class Lecture(UUIDModel, TimeStampedModel):
+    """Represents a lecture within a course with optional presentation file."""
+
     course = models.ForeignKey(
         Course, on_delete=models.CASCADE, related_name="lectures"
     )
@@ -68,10 +80,13 @@ class Lecture(UUIDModel, TimeStampedModel):
     objects = LectureQuerySet.as_manager()
 
     def __str__(self):
+        """Return 'Course Title - Lecture Topic'."""
         return f"{self.course.title} - {self.topic}"
 
 
 class Homework(UUIDModel, TimeStampedModel):
+    """Represents homework assigned for a lecture."""
+
     lecture = models.ForeignKey(
         Lecture, on_delete=models.CASCADE, related_name="homeworks"
     )
@@ -80,10 +95,13 @@ class Homework(UUIDModel, TimeStampedModel):
     objects = HomeworkQuerySet.as_manager()
 
     def __str__(self):
+        """Return 'HW for Lecture Topic'."""
         return f"HW for {self.lecture.topic}"
 
 
 class HomeworkSubmission(UUIDModel, TimeStampedModel):
+    """Represents a student's submission for a homework, including optional file."""
+
     homework = models.ForeignKey(
         Homework, on_delete=models.CASCADE, related_name="submissions"
     )
@@ -107,10 +125,13 @@ class HomeworkSubmission(UUIDModel, TimeStampedModel):
         ]
 
     def __str__(self):
+        """Return 'Student Email → Lecture Topic'."""
         return f"{self.student.email} → {self.homework.lecture.topic}"
 
 
 class Grade(UUIDModel, TimeStampedModel):
+    """Represents a grade given to a homework submission by a teacher."""
+
     submission = models.ForeignKey(
         HomeworkSubmission, on_delete=models.CASCADE, related_name="grades"
     )
@@ -130,10 +151,13 @@ class Grade(UUIDModel, TimeStampedModel):
     objects = GradeQuerySet.as_manager()
 
     def __str__(self):
+        """Return 'Grade Value% for Lecture Topic'."""
         return f"{self.value}% for {self.submission.homework.lecture.topic}"
 
 
 class GradeComment(UUIDModel, TimeStampedModel):
+    """Represents a comment on a grade, authored by a user."""
+
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE, related_name="comments")
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="grade_comments"
@@ -143,4 +167,5 @@ class GradeComment(UUIDModel, TimeStampedModel):
     objects = GradeCommentQuerySet.as_manager()
 
     def __str__(self):
+        """Return 'Comment by Author Email on Grade ID'."""
         return f"Comment by {self.author.email} on {self.grade.id}"

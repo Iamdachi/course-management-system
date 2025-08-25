@@ -2,8 +2,13 @@ import pytest
 from rest_framework import status
 from django.urls import reverse
 
-from courses.tests.factories import CourseFactory, LectureFactory, HomeworkFactory, HomeworkSubmissionFactory, \
-    StudentFactory
+from courses.tests.factories import (
+    CourseFactory,
+    LectureFactory,
+    HomeworkFactory,
+    HomeworkSubmissionFactory,
+    StudentFactory,
+)
 
 
 @pytest.mark.django_db

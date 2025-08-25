@@ -157,8 +157,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
         if request.method == "GET":
             lectures = (
-                course.lectures
-                .select_related("course")
+                course.lectures.select_related("course")
                 .prefetch_related("homeworks")
                 .prefetch_related("course__teachers", "course__students")
             )
@@ -226,11 +225,9 @@ class LectureViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
         lecture = self.get_object()
 
         if request.method == "GET":
-            homeworks = (
-                lecture.homeworks
-                .select_related("lecture__course")
-                .prefetch_related("submissions")
-            )
+            homeworks = lecture.homeworks.select_related(
+                "lecture__course"
+            ).prefetch_related("submissions")
             serializer = HomeworkSerializer(homeworks, many=True)
             return Response(serializer.data)
 
@@ -270,11 +267,11 @@ class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
         homework = self.get_object()
 
         if request.method == "GET":
-            submissions = (
-                homework.submissions
-                .select_related("student", "homework__lecture__course")  # FKs
-                .prefetch_related("grades")  # reverse
-            )
+            submissions = homework.submissions.select_related(
+                "student", "homework__lecture__course"
+            ).prefetch_related(  # FKs
+                "grades"
+            )  # reverse
             serializer = HomeworkSubmissionSerializer(submissions, many=True)
             return Response(serializer.data)
 
@@ -396,6 +393,7 @@ class GradeCommentViewSet(viewsets.ModelViewSet):
         Teacher can see all comments on their course’s grades, students see their own
         """
         return GradeComment.objects.for_user(self.request.user)
+
 
 class MySubmissionsView(ListAPIView):
     """List homework submissions for the authenticated user."""

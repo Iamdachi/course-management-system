@@ -7,7 +7,12 @@ def test_register(api_client):
     url = reverse("register")
     resp = api_client.post(
         url,
-        {"username": "newuser", "email": "n@example.com", "password": "pass", "role": "student"},
+        {
+            "username": "newuser",
+            "email": "n@example.com",
+            "password": "pass",
+            "role": "student",
+        },
         format="json",
     )
     assert resp.status_code == 201

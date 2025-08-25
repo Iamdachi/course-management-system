@@ -6,15 +6,13 @@ from courses.roles import Role
 
 
 class IsTeacherOrReadOnly(permissions.BasePermission):
-    """
-    Teachers can edit their own courses; everyone else can only read.
-    """
+    """Teachers can edit their own courses; everyone else can only read."""
 
     def has_permission(self, request, view):
         # can I access this view?
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user.is_authenticated and request.user.role == 'teacher'
+        return request.user.is_authenticated and request.user.role == "teacher"
 
     def has_object_permission(self, request, view, obj):
         # can I act on this specific object?
@@ -28,6 +26,7 @@ class IsCourseTeacherOrReadOnly(permissions.BasePermission):
     Teachers of the course can modify its lectures/homework.
     Others can only read.
     """
+
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
@@ -50,13 +49,17 @@ class IsStudentAndEnrolled(permissions.BasePermission):
         # object here is HomeworkSubmission
         return obj.homework.lecture.course.students.filter(id=user.id).exists()
 
+
 class IsTeacherOfCourse(permissions.BasePermission):
     """Only teachers of the course can grade."""
+
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == Role.TEACHER
 
     def has_object_permission(self, request, view, obj):
-        return obj.submission.homework.lecture.course.teachers.filter(id=request.user.id).exists()
+        return obj.submission.homework.lecture.course.teachers.filter(
+            id=request.user.id
+        ).exists()
 
 
 class IsGradeOwnerOrCourseTeacher(permissions.BasePermission):
@@ -131,10 +134,9 @@ class CanAccessSubmissions(permissions.BasePermission):
 
         return False
 
+
 class CanGradeCourse(permissions.BasePermission):
-    """
-    Only teachers of the submission's course can POST grades.
-    """
+    """Only teachers of the submission's course can POST grades."""
 
     def has_object_permission(self, request, view, obj):
         if request.user.role != Role.TEACHER:
@@ -144,6 +146,8 @@ class CanGradeCourse(permissions.BasePermission):
 
 
 class CanCommentOnGrade(permissions.BasePermission):
+    """Allow grade comments by the submission’s student or course teachers."""
+
     def has_object_permission(self, request, view, obj):
         user = request.user
 
