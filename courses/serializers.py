@@ -26,7 +26,7 @@ class LectureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lecture
         fields = ["id", "course", "topic", "presentation", "created_at", "updated_at"]
-        read_only_fields = ("course",)
+        read_only_fields = ("course", "created_at", "updated_at")
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)

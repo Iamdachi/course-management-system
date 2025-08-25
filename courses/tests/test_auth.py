@@ -4,7 +4,7 @@ from django.urls import reverse
 
 @pytest.mark.django_db
 def test_register(api_client):
-    url = reverse("register")  # safer than "/api/v1/auth/register/"
+    url = reverse("register")
     resp = api_client.post(
         url,
         {"username": "newuser", "email": "n@example.com", "password": "pass", "role": "student"},
@@ -13,14 +13,13 @@ def test_register(api_client):
     assert resp.status_code == 201
 
 
-
-
 @pytest.mark.django_db
 def test_login(api_client, teacher):
-    url = reverse("token_obtain_pair")  # maps to /token/
+    url = reverse("token_obtain_pair")
+    print(teacher.username)
     resp = api_client.post(
         url,
-        {"username": teacher.username, "password": "password123"},  # match factory password
+        {"username": teacher.username, "password": "password123"},
         format="json",
     )
     assert resp.status_code == 200

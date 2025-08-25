@@ -1,7 +1,4 @@
 import pytest
-from rest_framework.reverse import reverse
-
-from .factories import CourseFactory  # you need this
 
 
 @pytest.mark.django_db

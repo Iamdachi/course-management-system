@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 import factory
 
-from ..models import Course
-from ..roles import Role  # your Role enum-like object
+from ..models import Course, Lecture, Homework
+from ..roles import Role
 
 User = get_user_model()
 
@@ -28,4 +29,40 @@ class CourseFactory(factory.django.DjangoModelFactory):
         model = Course
 
     title = factory.Sequence(lambda n: f"Course {n}")
-    description = "Test course"
+
+    @factory.post_generation
+    def teachers(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for teacher in extracted:
+                self.teachers.add(teacher)
+
+    @factory.post_generation
+    def students(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for student in extracted:
+                self.students.add(student)
+
+
+class LectureFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Lecture
+
+    course = factory.SubFactory(CourseFactory)
+    topic = factory.Faker("sentence", nb_words=3)
+    presentation = None
+    created_at = factory.LazyFunction(timezone.now)
+    updated_at = factory.LazyFunction(timezone.now)
+
+
+class HomeworkFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Homework
+
+    lecture = factory.SubFactory(LectureFactory)
+    description = factory.Faker("paragraph", nb_sentences=2)
+    created_at = factory.LazyFunction(timezone.now)
+    updated_at = factory.LazyFunction(timezone.now)
