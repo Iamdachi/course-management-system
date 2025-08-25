@@ -242,7 +242,7 @@ class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
             submissions = (
                 homework.submissions
                 .select_related("student", "homework__lecture__course")  # FKs
-                .prefetch_related("grade_set")  # reverse
+                .prefetch_related("grades")  # reverse
             )
             serializer = HomeworkSubmissionSerializer(submissions, many=True)
             return Response(serializer.data)
