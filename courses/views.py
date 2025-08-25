@@ -41,15 +41,20 @@ User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
+    """Register a new user account."""
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
 
 class LogoutView(APIView):
+    """Log out a user by blacklisting their refresh token."""
+
     permission_classes = [AllowAny]
 
     def post(self, request):
+        """Handle POST request to log out a user."""
         try:
             refresh_token = request.data["refresh"]
             token = RefreshToken(refresh_token)
@@ -60,25 +65,31 @@ class LogoutView(APIView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """CRUD operations for user accounts."""
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
 
 class CourseViewSet(viewsets.ModelViewSet):
+    """Manage courses, including teachers, students, and lectures."""
+
     queryset = Course.objects.all().prefetch_related("teachers", "students")
     serializer_class = CourseSerializer
     permission_classes = [IsTeacherOrReadOnly]
 
     def get_queryset(self):
+        """Return courses accessible by the requesting user."""
         return Course.objects.for_user(self.request.user)
 
     def perform_create(self, serializer):
+        """Save a new course and add the creator as a teacher."""
         course = serializer.save()  # save the Course first
         course.teachers.add(self.request.user)  # auto-adds creator as teacher (M2M)
 
-    def _manage_relation(self, relation_name, role=None):
+    def _teacher_student_management(self, relation_name, role=None):
         """
-        Generic M2M manager for teachers or students.
+        Handle get/add/remove operations for course teachers or students.
         - relation_name: str, e.g., 'teachers' or 'students'
         - role: optional Role constant to enforce (Role.TEACHER / Role.STUDENT)
         """
@@ -115,6 +126,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         return handler()
 
     def _get_user_or_404(self, user_id, role=None):
+        """Fetch a user by ID, optionally filtering by role, or raise 404."""
         try:
             user = User.objects.get(id=user_id)
             if role and user.role != role:
@@ -124,19 +136,23 @@ class CourseViewSet(viewsets.ModelViewSet):
             raise NotFound(f"{role or 'User'} not found.")
 
     def _assert_course_teacher(self, course):
+        """Raise PermissionDenied if the requesting user is not a course teacher."""
         if not course.teachers.filter(id=self.request.user.id).exists():
             raise PermissionDenied("You are not a teacher in this course.")
 
     @action(detail=True, methods=["get", "post", "delete"], url_path="teachers")
     def manage_teachers(self, request, pk=None):
-        return self._manage_relation("teachers", role=Role.TEACHER)
+        """Manage teachers for the course."""
+        return self._teacher_student_management("teachers", role=Role.TEACHER)
 
     @action(detail=True, methods=["get", "post", "delete"], url_path="students")
     def manage_students(self, request, pk=None):
-        return self._manage_relation("students", role=Role.STUDENT)
+        """Manage students for the course."""
+        return self._teacher_student_management("students", role=Role.STUDENT)
 
     @action(detail=True, methods=["get", "post"], url_path="lectures")
     def lectures(self, request, pk=None):
+        """Retrieve or create lectures for the course."""
         course = self.get_object()
 
         if request.method == "GET":
@@ -161,9 +177,12 @@ class CourseViewSet(viewsets.ModelViewSet):
 
 
 class MyTeachingCoursesView(APIView):
+    """Retrieve all courses the authenticated teacher is teaching."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        """Return the list of courses for the requesting teacher."""
         if request.user.role != Role.TEACHER:
             return Response(
                 {"detail": "Only teachers can view teaching courses."}, status=403
@@ -174,9 +193,12 @@ class MyTeachingCoursesView(APIView):
 
 
 class MyEnrolledCoursesView(APIView):
+    """Retrieve all courses the authenticated student is enrolled in."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        """Return the list of courses for the requesting student."""
         if request.user.role != Role.STUDENT:
             return Response(
                 {"detail": "Only students can view enrolled courses."}, status=403
@@ -187,16 +209,20 @@ class MyEnrolledCoursesView(APIView):
 
 
 class LectureViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
+    """Manage lectures and associated homeworks."""
+
     queryset = Lecture.objects.all()
     serializer_class = LectureSerializer
     permission_classes = [IsCourseTeacherOrReadOnly]
     parser_classes = [parsers.JSONParser, parsers.MultiPartParser, parsers.FormParser]
 
     def get_queryset(self):
+        """Return lectures accessible by the requesting user."""
         return Lecture.objects.for_user(self.request.user)
 
     @action(detail=True, methods=["get", "post"], url_path="homeworks")
     def homeworks(self, request, pk=None):
+        """Retrieve or create homeworks for the lecture."""
         lecture = self.get_object()
 
         if request.method == "GET":
@@ -218,24 +244,29 @@ class LectureViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
 
 
 class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
+    """Manage homeworks and their submissions."""
+
     http_method_names = ["get", "patch", "post", "delete"]
     queryset = Homework.objects.all()
     serializer_class = HomeworkSerializer
     permission_classes = [IsCourseTeacherOrReadOnly]
 
     def get_queryset(self):
+        """Return homeworks visible to the requesting user."""
         user = self.request.user
         if user.role == Role.TEACHER:
             return Homework.objects.filter(lecture__course__teachers=user)
         return Homework.objects.filter(lecture__course__students=user)
 
     def get_permissions(self):
+        """Return permissions depending on the current action."""
         if self.action == "submissions":
             return [CanAccessSubmissions()]
         return super().get_permissions()
 
     @action(detail=True, methods=["get", "post"], url_path="submissions")
     def submissions(self, request, pk=None):
+        """Retrieve or submit homework submissions."""
         homework = self.get_object()
 
         if request.method == "GET":
@@ -258,10 +289,13 @@ class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
 
 
 class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
+    """Manage individual homework submissions and grades."""
+
     serializer_class = HomeworkSubmissionSerializer
     permission_classes = [IsStudentAndEnrolled]
 
     def get_queryset(self):
+        """Return submissions visible to the requesting user."""
         user = self.request.user
         if user.role == Role.TEACHER:
             return HomeworkSubmission.objects.filter(
@@ -270,12 +304,14 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
         return HomeworkSubmission.objects.filter(student=user)
 
     def get_permissions(self):
+        """Return permissions depending on the current action."""
         if self.action == "grades" and self.request.method == "POST":
             return [CanGradeCourse()]
         return super().get_permissions()
 
     @action(detail=True, methods=["get", "post"], url_path="grades")
     def grades(self, request, pk=None):
+        """Retrieve or add grades for a homework submission."""
         submission = (
             self.get_queryset()
             .select_related("homework__lecture__course")
@@ -296,16 +332,21 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
 
 
 class GradeViewSet(viewsets.ModelViewSet):
+    """Manage grades and their comments."""
+
     serializer_class = GradeSerializer
     permission_classes = [permissions.IsAuthenticated, IsGradeOwnerOrCourseTeacher]
 
     def get_queryset(self):
+        """Return grades accessible by the requesting user."""
         return Grade.objects.for_user(self.request.user)
 
     def perform_create(self, serializer):
+        """Save a new grade with the current user as teacher."""
         serializer.save(teacher=self.request.user)  # sets teacher
 
     def perform_update(self, serializer):
+        """Update a grade while keeping the teacher fixed."""
         serializer.save(
             teacher=self.request.user
         )  # also enforce teacher stays the same
@@ -317,6 +358,7 @@ class GradeViewSet(viewsets.ModelViewSet):
         permission_classes=[CanCommentOnGrade],
     )
     def comments(self, request, pk=None):
+        """Retrieve or add comments on a grade."""
         grade = (
             self.get_queryset()
             .select_related("submission__homework__lecture__course", "teacher")
@@ -337,23 +379,32 @@ class GradeViewSet(viewsets.ModelViewSet):
 
 
 class GradeCommentViewSet(viewsets.ModelViewSet):
+    """Manage grade comments."""
+
     http_method_names = ["get", "patch", "put", "delete"]
     queryset = GradeComment.objects.all()
     serializer_class = GradeCommentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
+        """Save a new grade comment with the current user as author."""
         serializer.save(author=self.request.user)
 
     def get_queryset(self):
-        # Teacher can see all comments on their course’s grades, students see their own
+        """
+        Return comments visible to the requesting user.
+        Teacher can see all comments on their course’s grades, students see their own
+        """
         return GradeComment.objects.for_user(self.request.user)
 
 class MySubmissionsView(ListAPIView):
+    """List homework submissions for the authenticated user."""
+
     serializer_class = HomeworkSubmissionSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        """Return submissions filtered by role and optional query params."""
         user = self.request.user
         qs = HomeworkSubmission.objects.all()
         if user.role == Role.STUDENT:
