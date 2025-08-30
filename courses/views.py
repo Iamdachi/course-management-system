@@ -333,7 +333,7 @@ class GradeViewSet(viewsets.ModelViewSet):
     """Manage grades and their comments."""
 
     serializer_class = GradeSerializer
-    permission_classes = [permissions.IsAuthenticated, IsGradeOwnerOrCourseTeacher]
+    permission_classes = [IsGradeOwnerOrCourseTeacher]
 
     def get_queryset(self):
         """Return grades accessible by the requesting user."""
@@ -341,13 +341,11 @@ class GradeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Save a new grade with the current user as teacher."""
-        serializer.save(teacher=self.request.user)  # sets teacher
+        serializer.save(teacher=self.request.user)
 
     def perform_update(self, serializer):
         """Update a grade while keeping the teacher fixed."""
-        serializer.save(
-            teacher=self.request.user
-        )  # also enforce teacher stays the same
+        serializer.save(teacher=self.request.user)
 
     @action(
         detail=True,

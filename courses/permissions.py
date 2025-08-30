@@ -67,23 +67,27 @@ class IsGradeOwnerOrCourseTeacher(permissions.BasePermission):
     Students can only see their own grades.
     Teachers can manage grades for submissions in their courses.
     """
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+
+    def _is_teacher_of(self, user, obj):
+        return user in obj.submission.homework.lecture.course.teachers.all()
 
     def has_object_permission(self, request, view, obj):
         user = request.user
 
-        # Read-only case
         if request.method in permissions.SAFE_METHODS:
             if user.role == Role.STUDENT:
                 return obj.submission.student == user
             if user.role == Role.TEACHER:
-                return user in obj.submission.homework.lecture.course.teachers.all()
+                return self._is_teacher_of(user, obj)
             return False
 
-        # Write/update/delete case
         if user.role == Role.TEACHER:
-            return user in obj.submission.homework.lecture.course.teachers.all()
+            return self._is_teacher_of(user, obj)
 
         return False
+
 
 
 class IsStudentOfCourseOrTeacherCanView(permissions.BasePermission):
