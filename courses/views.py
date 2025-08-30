@@ -270,9 +270,9 @@ class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
         if request.method == "GET":
             submissions = homework.submissions.select_related(
                 "student", "homework__lecture__course"
-            ).prefetch_related(  # FKs
+            ).prefetch_related(
                 "grades"
-            )  # reverse
+            )
             serializer = HomeworkSubmissionSerializer(submissions, many=True)
             return Response(serializer.data)
 
@@ -405,13 +405,13 @@ class MySubmissionsView(ListAPIView):
     def get_queryset(self):
         """Return submissions filtered by role and optional query params."""
         user = self.request.user
-        qs = HomeworkSubmission.objects.all()
+        submissions = HomeworkSubmission.objects.all()
         if user.role == Role.STUDENT:
             # Students → only their own submissions
-            qs = qs.filter(student=user)
+            submissions = submissions.filter(student=user)
         elif user.role == Role.TEACHER:
             # Teachers → submissions from their courses
-            qs = qs.filter(homework__lecture__course__teachers=user)
+            submissions = submissions.filter(homework__lecture__course__teachers=user)
         else:
             # Other roles (e.g. admin) → nothing, or you could allow full access
             return HomeworkSubmission.objects.none()
@@ -422,10 +422,10 @@ class MySubmissionsView(ListAPIView):
         lecture_id = self.request.query_params.get("lecture")
 
         if homework_id:
-            qs = qs.filter(homework_id=homework_id)
+            submissions = submissions.filter(homework_id=homework_id)
         if lecture_id:
-            qs = qs.filter(homework__lecture_id=lecture_id)
+            submissions = submissions.filter(homework__lecture_id=lecture_id)
         if course_id:
-            qs = qs.filter(homework__lecture__course_id=course_id)
+            submissions = submissions.filter(homework__lecture__course_id=course_id)
 
-        return qs
+        return submissions
