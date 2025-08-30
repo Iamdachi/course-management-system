@@ -405,16 +405,8 @@ class MySubmissionsView(ListAPIView):
     def get_queryset(self):
         """Return submissions filtered by role and optional query params."""
         user = self.request.user
-        submissions = HomeworkSubmission.objects.all()
-        if user.role == Role.STUDENT:
-            # Students → only their own submissions
-            submissions = submissions.filter(student=user)
-        elif user.role == Role.TEACHER:
-            # Teachers → submissions from their courses
-            submissions = submissions.filter(homework__lecture__course__teachers=user)
-        else:
-            # Other roles (e.g. admin) → nothing
-            return HomeworkSubmission.objects.none()
+
+        submissions = HomeworkSubmission.objects.for_user(user)
 
         # Optional filters
         homework_id = self.request.query_params.get("homework")
