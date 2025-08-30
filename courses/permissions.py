@@ -154,13 +154,11 @@ class CanCommentOnGrade(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         user = request.user
+        if not user.is_authenticated:
+            return False
 
-        # Student who owns the submission
         if obj.submission.student == user:
             return True
 
-        # Any teacher of the course the submission belongs to
-        if obj.submission.homework.lecture.course.teachers.filter(id=user.id).exists():
-            return True
+        return obj.submission.homework.lecture.course.teachers.filter(id=user.id).exists()
 
-        return False

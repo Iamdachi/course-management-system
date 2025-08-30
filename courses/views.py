@@ -379,7 +379,7 @@ class GradeCommentViewSet(viewsets.ModelViewSet):
 
     http_method_names = ["get", "patch", "delete"]
     serializer_class = GradeCommentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [CanCommentOnGrade]
 
     def perform_create(self, serializer):
         """Save a new grade comment with the current user as author."""
