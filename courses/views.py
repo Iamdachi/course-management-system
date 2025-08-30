@@ -379,7 +379,7 @@ class GradeViewSet(viewsets.ModelViewSet):
 class GradeCommentViewSet(viewsets.ModelViewSet):
     """Manage grade comments."""
 
-    http_method_names = ["get", "patch", "put", "delete"]
+    http_method_names = ["get", "patch", "delete"]
     queryset = GradeComment.objects.all()
     serializer_class = GradeCommentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -413,7 +413,7 @@ class MySubmissionsView(ListAPIView):
             # Teachers → submissions from their courses
             submissions = submissions.filter(homework__lecture__course__teachers=user)
         else:
-            # Other roles (e.g. admin) → nothing, or you could allow full access
+            # Other roles (e.g. admin) → nothing
             return HomeworkSubmission.objects.none()
 
         # Optional filters
