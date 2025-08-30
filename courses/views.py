@@ -380,7 +380,6 @@ class GradeCommentViewSet(viewsets.ModelViewSet):
     """Manage grade comments."""
 
     http_method_names = ["get", "patch", "delete"]
-    queryset = GradeComment.objects.all()
     serializer_class = GradeCommentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -405,10 +404,8 @@ class MySubmissionsView(ListAPIView):
     def get_queryset(self):
         """Return submissions filtered by role and optional query params."""
         user = self.request.user
-
         submissions = HomeworkSubmission.objects.for_user(user)
 
-        # Optional filters
         homework_id = self.request.query_params.get("homework")
         course_id = self.request.query_params.get("course")
         lecture_id = self.request.query_params.get("lecture")
