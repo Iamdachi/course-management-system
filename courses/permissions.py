@@ -161,3 +161,11 @@ class CanCommentOnGrade(permissions.BasePermission):
 
         return obj.submission.homework.lecture.course.teachers.filter(id=user.id).exists()
 
+
+class IsSelfOrAdmin(permissions.BasePermission):
+    """
+    Allow access if the requesting user is the object itself or is staff.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        return request.user and (request.user.is_staff or obj == request.user)

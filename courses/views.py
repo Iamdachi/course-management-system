@@ -25,7 +25,7 @@ from .permissions import (
     IsGradeOwnerOrCourseTeacher,
     CanAccessSubmissions,
     CanGradeCourse,
-    CanCommentOnGrade,
+    CanCommentOnGrade, IsSelfOrAdmin,
 )
 from .serializers import (
     UserSerializer,
@@ -43,7 +43,6 @@ User = get_user_model()
 class RegisterView(generics.CreateAPIView):
     """Register a new user account."""
 
-    queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
@@ -51,7 +50,7 @@ class RegisterView(generics.CreateAPIView):
 class LogoutView(APIView):
     """Log out a user by blacklisting their refresh token."""
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         """Handle POST request to log out a user."""
@@ -65,11 +64,18 @@ class LogoutView(APIView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """CRUD operations for user accounts."""
-
+    """User profile management."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSelfOrAdmin]
+
+    @action(detail=False, methods=["get", "patch"])
+    def me(self, request):
+        """Endpoint for the authenticated user's own profile."""
+        serializer = self.get_serializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
