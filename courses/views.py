@@ -335,7 +335,7 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
             return Response(serializer.data, status=201)
 
 
-class GradeViewSet(viewsets.ModelViewSet):
+class GradeViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
     """Manage grades and their comments."""
 
     serializer_class = GradeSerializer
@@ -380,7 +380,7 @@ class GradeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=201)
 
 
-class GradeCommentViewSet(viewsets.ModelViewSet):
+class GradeCommentViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
     """Manage grade comments."""
 
     http_method_names = ["get", "patch", "delete"]
