@@ -149,17 +149,21 @@ class CanGradeCourse(permissions.BasePermission):
 
 
 class CanCommentOnGrade(permissions.BasePermission):
-    """Allow grade comments by the submission’s student or course teachers."""
-
     def has_object_permission(self, request, view, obj):
         user = request.user
         if not user.is_authenticated:
             return False
 
-        if obj.submission.student == user:
+        # Teacher can comment if they teach the course
+        if user.role == Role.TEACHER and obj.grade.submission.homework.lecture.course.teachers.filter(id=user.id).exists():
             return True
 
-        return obj.submission.homework.lecture.course.teachers.filter(id=user.id).exists()
+        # Student can see their own grades
+        if user.role == Role.STUDENT and obj.grade.submission.student == user:
+            return True
+
+        return False
+
 
 
 class IsSelfOrAdmin(permissions.BasePermission):

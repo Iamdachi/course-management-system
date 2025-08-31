@@ -91,6 +91,6 @@ class GradeCommentQuerySet(UserFilteredQuerySet):
         """Return grade comments in courses or on the student's grades."""
         return super().for_user(
             user,
-            teacher_filter={"grade__submission__homework__course__teachers": user},
+            teacher_filter={"grade__submission__homework__lecture__course__teachers": user},
             student_filter={"grade__submission__student": user},
         )

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 import factory
 
-from ..models import Course, Lecture, Homework, HomeworkSubmission
+from ..models import Course, Lecture, Homework, HomeworkSubmission, Grade
 from ..roles import Role
 
 User = get_user_model()
@@ -77,3 +77,14 @@ class HomeworkSubmissionFactory(factory.django.DjangoModelFactory):
     student = factory.SubFactory(StudentFactory)
     content = factory.Faker("paragraph")
     file = None
+
+
+class GradeFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Grade
+
+    submission = factory.SubFactory(HomeworkSubmissionFactory)
+    teacher = factory.SubFactory(TeacherFactory)
+    value = factory.Iterator([70, 80, 90, 100])
+    created_at = factory.LazyFunction(timezone.now)
+    updated_at = factory.LazyFunction(timezone.now)
