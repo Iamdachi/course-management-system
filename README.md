@@ -1,5 +1,7 @@
 It is assumed that Django/DRF frameworks will be used. All application logic must be implemented and accessible via an API (NOT via the Django admin module). You may optionally add an admin panel if you wish.
 
+
+## Features 
 All users in the system have the following capabilities:
 
     Registration (during registration, the user chooses their role — Teacher or Student)
@@ -33,3 +35,21 @@ Additional requirements:
 
     Data security (permissions for all CRUD actions)
     API documentation (OpenAPI)
+
+## Installation
+```bash
+git clone https://github.com/yourname/course-api.git
+cd leverx-courses
+uv sync
+```
+
+## Running
+```bash
+uv run python manage.py runserver
+```
+
+## Testing
+```bash
+cd courses/tests/
+uv run pytest
+```
