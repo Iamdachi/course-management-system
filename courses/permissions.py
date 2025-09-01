@@ -1,7 +1,7 @@
 from rest_framework import permissions
 from rest_framework.permissions import SAFE_METHODS
 
-from courses.roles import Role
+from courses.models.roles import Role
 
 
 class IsTeacherOrReadOnly(permissions.BasePermission):

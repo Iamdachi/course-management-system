@@ -1,5 +1,5 @@
 from django.db import models
-from .roles import Role
+from courses.models.roles import Role
 
 
 class RoleFilteredQuerySet(models.QuerySet):

@@ -3,7 +3,7 @@ from django.utils import timezone
 import factory
 
 from ..models import Course, Lecture, Homework, HomeworkSubmission, Grade
-from ..roles import Role
+from courses.models.roles import Role
 
 User = get_user_model()
 

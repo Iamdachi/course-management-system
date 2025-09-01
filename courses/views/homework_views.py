@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from courses.mixins import PostPutBlockedMixin
 from courses.models import Homework, HomeworkSubmission
 from courses.permissions import IsCourseTeacherOrReadOnly, CanAccessSubmissions, IsStudentAndEnrolled, CanGradeCourse
-from courses.roles import Role
+from courses.models.roles import Role
 from courses.serializers import HomeworkSerializer, HomeworkSubmissionSerializer, GradeSerializer
 
 

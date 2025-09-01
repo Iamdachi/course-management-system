@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from courses.models import Course
 from courses.permissions import IsTeacherOrReadOnly
-from courses.roles import Role
+from courses.models.roles import Role
 from courses.serializers import CourseSerializer, UserSerializer, LectureSerializer
 
 User = get_user_model()

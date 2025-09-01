@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from courses.models import Course
-from courses.roles import Role
+from courses.models.roles import Role
 
 User = get_user_model()
 
