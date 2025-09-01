@@ -29,7 +29,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         course = serializer.save()
-        course.teachers.add(self.request.user)  # optional: can move to service
+        course.teachers.add(self.request.user)
 
     @action(detail=True, methods=["get", "post", "delete"], url_path="teachers")
     def manage_teachers(self, request, pk=None):

@@ -63,7 +63,7 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
 
     @action(detail=True, methods=["get", "post"], url_path="grades")
     def grades(self, request, pk=None):
-        submission = self.get_object()  # queryset filtering already done in get_queryset()
+        submission = self.get_object()
 
         if request.method == "GET":
             grades = get_submission_grades(submission)

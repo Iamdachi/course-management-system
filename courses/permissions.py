@@ -116,7 +116,7 @@ class CanAccessSubmissions(permissions.BasePermission):
         homework = view.get_object()
         course = homework.lecture.course
 
-        if request.method in SAFE_METHODS:  # GET, HEAD, OPTIONS
+        if request.method in SAFE_METHODS:
             if user.role == Role.TEACHER:
                 return course.teachers.filter(id=user.id).exists()
             if user.role == Role.STUDENT:

@@ -25,7 +25,6 @@ def get_grade_comments(grade: Grade):
 
 def add_grade_comment(grade: Grade, author, content):
     """Add a comment to a grade, enforcing any permission rules."""
-    # Permissions are enforced in DRF via CanCommentOnGrade
     comment = GradeComment.objects.create(grade=grade, author=author, content=content)
     return comment
 
