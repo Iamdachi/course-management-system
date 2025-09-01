@@ -38,18 +38,13 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("", include(router.urls)),
-    path(
-        "me/teaching-courses/",
-        MyTeachingCoursesView.as_view(),
-        name="my-teaching-courses",
-    ),
-    path(
-        "me/enrolled-courses/",
-        MyEnrolledCoursesView.as_view(),
-        name="my-enrolled-courses",
-    ),
-    path("me/submissions/", MySubmissionsView.as_view(), name="my-submissions"),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+]
+
+urlpatterns += [
+    path("me/teaching-courses/", MyTeachingCoursesView.as_view(), name="my-teaching-courses"),
+    path("me/enrolled-courses/", MyEnrolledCoursesView.as_view(), name="my-enrolled-courses"),
+    path("me/submissions/", MySubmissionsView.as_view(), name="my-submissions"),
 ]
