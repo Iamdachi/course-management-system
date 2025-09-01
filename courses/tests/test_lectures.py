@@ -28,7 +28,6 @@ def test_teacher_can_list_lectures(api_client, teacher):
 def test_student_can_list_only_their_lectures(api_client, student):
     course = CourseFactory(students=[student])
     LectureFactory.create_batch(2, course=course)
-    # lectures from another course (not enrolled)
     LectureFactory.create_batch(2)
 
     api_client.force_authenticate(user=student)

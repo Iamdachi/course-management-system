@@ -91,8 +91,8 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Save a new course and add the creator as a teacher."""
-        course = serializer.save()  # save the Course first
-        course.teachers.add(self.request.user)  # auto-adds creator as teacher (M2M)
+        course = serializer.save()
+        course.teachers.add(self.request.user)
 
     def _teacher_student_management(self, relation_name, role=None):
         """
@@ -108,14 +108,14 @@ class CourseViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
         def add_item():
-            self._assert_course_teacher(course)  # only course teachers can add
+            self._assert_course_teacher(course)
             user_id = self.request.data.get("user")
             user = self._get_user_or_404(user_id, role)
             relation.add(user)
             return Response({"detail": f"{user.username} added."}, status=201)
 
         def remove_item():
-            self._assert_course_teacher(course)  # only course teachers can remove
+            self._assert_course_teacher(course)
             user_id = self.request.data.get("user")
             user = self._get_user_or_404(user_id, role)
             relation.remove(user)
@@ -287,7 +287,7 @@ class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
             serializer.is_valid(raise_exception=True)
             serializer.save(
                 homework=homework,
-                student=request.user,  # attach the authenticated student
+                student=request.user,
             )
             return Response(serializer.data, status=201)
 

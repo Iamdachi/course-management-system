@@ -8,13 +8,11 @@ class IsTeacherOrReadOnly(permissions.BasePermission):
     """Teachers can edit their own courses; everyone else can only read."""
 
     def has_permission(self, request, view):
-        # can I access this view?
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user.is_authenticated and request.user.role == "teacher"
 
     def has_object_permission(self, request, view, obj):
-        # can I act on this specific object?
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user in obj.teachers.all()
@@ -45,7 +43,6 @@ class IsStudentAndEnrolled(permissions.BasePermission):
             return True
         if user.role != "student":
             return False
-        # object here is HomeworkSubmission
         return obj.homework.lecture.course.students.filter(id=user.id).exists()
 
 
@@ -100,10 +97,8 @@ class IsStudentOfCourseOrTeacherCanView(permissions.BasePermission):
         user = request.user
 
         if user.role == Role.TEACHER:
-            # Teacher can view only if they teach this course
             return user in obj.lecture.course.teachers.all()
 
-        # Student can act only if enrolled in the course
         return user in obj.lecture.course.students.all()
 
 
@@ -118,7 +113,6 @@ class CanAccessSubmissions(permissions.BasePermission):
         if not user.is_authenticated:
             return False
 
-        # homework is tied to the view (detail=True action)
         homework = view.get_object()
         course = homework.lecture.course
 
@@ -144,7 +138,6 @@ class CanGradeCourse(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.user.role != Role.TEACHER:
             return False
-        # obj is HomeworkSubmission
         return obj.homework.lecture.course.teachers.filter(id=request.user.id).exists()
 
 
@@ -154,11 +147,9 @@ class CanCommentOnGrade(permissions.BasePermission):
         if not user.is_authenticated:
             return False
 
-        # Teacher can comment if they teach the course
         if user.role == Role.TEACHER and obj.grade.submission.homework.lecture.course.teachers.filter(id=user.id).exists():
             return True
 
-        # Student can see their own grades
         if user.role == Role.STUDENT and obj.grade.submission.student == user:
             return True
 

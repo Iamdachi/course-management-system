@@ -33,17 +33,14 @@ def test_student_can_submit_homework(api_client, student):
 
 @pytest.mark.django_db
 def test_teacher_can_list_submissions(api_client, teacher):
-    # Create course, lecture, homework
     course = CourseFactory(teachers=[teacher])
     lecture = LectureFactory(course=course)
     homework = HomeworkFactory(lecture=lecture)
 
-    # Create two student submissions
     students = [StudentFactory() for _ in range(2)]
     for student in students:
         HomeworkSubmissionFactory(homework=homework, student=student)
 
-    # Authenticate as teacher and hit endpoint
     api_client.force_authenticate(user=teacher)
     url = reverse("homework-submissions", args=[homework.id])
     resp = api_client.get(url)
