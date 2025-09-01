@@ -101,7 +101,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         - role: optional Role constant to enforce (Role.TEACHER / Role.STUDENT)
         """
         course = self.get_object()
-        relation = getattr(course, relation_name)  # course.teachers or course.students
+        relation = getattr(course, relation_name)
 
         def get_items():
             serializer = UserSerializer(relation.all(), many=True)
@@ -319,7 +319,7 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
         submission = (
             self.get_queryset()
             .select_related("homework__lecture__course")
-            .prefetch_related("grades__comments")  # if GradeComment has FK to Grade
+            .prefetch_related("grades__comments")
             .get(pk=pk)
         )
 
