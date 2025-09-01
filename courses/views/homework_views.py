@@ -1,13 +1,11 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from courses.mixins import PostPutBlockedMixin
-from courses.models import Homework, HomeworkSubmission
+from courses.models import Homework
 from courses.permissions import IsCourseTeacherOrReadOnly, CanAccessSubmissions, IsStudentAndEnrolled, CanGradeCourse
-from courses.models.roles import Role
 from courses.serializers import HomeworkSerializer, HomeworkSubmissionSerializer, GradeSerializer
 
 from courses.services.homework_services import (
@@ -78,17 +76,16 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
             return Response(serializer.data, status=201)
 
 
-class MySubmissionsView(ListAPIView):
-    """List homework submissions for the authenticated user."""
-
-    serializer_class = HomeworkSubmissionSerializer
+class MySubmissionsViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        params = self.request.query_params
-        return filter_submissions_for_user(
-            self.request.user,
+    def list(self, request):
+        params = request.query_params
+        submissions = filter_submissions_for_user(
+            request.user,
             homework_id=params.get("homework"),
             lecture_id=params.get("lecture"),
             course_id=params.get("course"),
         )
+        serializer = HomeworkSubmissionSerializer(submissions, many=True)
+        return Response(serializer.data)

@@ -18,6 +18,7 @@ from courses.services.course_services import (
 )
 User = get_user_model()
 
+
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all().prefetch_related("teachers", "students")
     serializer_class = CourseSerializer
@@ -86,24 +87,21 @@ class CourseViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=201)
 
 
-
-class MyTeachingCoursesView(APIView):
+class MyTeachingCoursesViewSet(viewsets.ViewSet):
     """Retrieve all courses the authenticated teacher is teaching."""
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def list(self, request):
         courses = get_teaching_courses(request.user)
         serializer = CourseSerializer(courses, many=True)
         return Response(serializer.data)
 
 
-class MyEnrolledCoursesView(APIView):
-    """Retrieve all courses the authenticated student is enrolled in."""
-
+class MyEnrolledCoursesViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def list(self, request):
         courses = get_enrolled_courses(request.user)
         serializer = CourseSerializer(courses, many=True)
         return Response(serializer.data)

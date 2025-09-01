@@ -3,32 +3,36 @@ from rest_framework import generics, viewsets, status, request
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
-
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+from rest_framework import viewsets, mixins
 from courses.permissions import IsSelfOrAdmin
 from courses.serializers import UserSerializer
-from courses.services.user_services import blacklist_refresh_token
 
 User = get_user_model()
 
 
-class RegisterView(generics.CreateAPIView):
-    """Register a new user account."""
+class RegisterViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """
+    Register a new user account.
+    """
 
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
 
-class LogoutView(APIView):
+class LogoutViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """
+    Logout by blacklisting the refresh token.
+    """
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def create(self, request, *args, **kwargs):
         try:
             refresh_token = request.data["refresh"]
-            blacklist_refresh_token(refresh_token)
+            token = OutstandingToken.objects.get(token=refresh_token)
+            BlacklistedToken.objects.create(token=token)
             return Response(status=status.HTTP_205_RESET_CONTENT)
-        except (KeyError, Exception):
+        except (KeyError, OutstandingToken.DoesNotExist):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 

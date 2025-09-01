@@ -8,18 +8,18 @@ from drf_spectacular.views import (
 )
 
 from courses.views import (
-    RegisterView,
-    LogoutView,
+    RegisterViewSet,
+    LogoutViewSet,
     UserViewSet,
     CourseViewSet,
     LectureViewSet,
     HomeworkViewSet,
     HomeworkSubmissionViewSet,
     GradeViewSet,
-    MyTeachingCoursesView,
-    MyEnrolledCoursesView,
+    MyTeachingCoursesViewSet,
+    MyEnrolledCoursesViewSet,
     GradeCommentViewSet,
-    MySubmissionsView,
+    MySubmissionsViewSet,
 )
 
 router = DefaultRouter()
@@ -30,13 +30,13 @@ router.register(r"homeworks", HomeworkViewSet)
 router.register(r"submissions", HomeworkSubmissionViewSet, basename="submission")
 router.register(r"grades", GradeViewSet, basename="grade")
 router.register(r"grade-comments", GradeCommentViewSet, basename="grade-comment")
-
+router.register(r"logout", LogoutViewSet, basename="logout")
+router.register(r"me/enrolled-courses", MyEnrolledCoursesViewSet, basename="my-enrolled-courses"),
 
 urlpatterns = [
-    path("register/", RegisterView.as_view(), name="register"),
+    path("register/", RegisterViewSet.as_view({'post': 'create'}), name="register"),
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("logout/", LogoutView.as_view(), name="logout"),
     path("", include(router.urls)),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
@@ -44,7 +44,14 @@ urlpatterns = [
 ]
 
 urlpatterns += [
-    path("me/teaching-courses/", MyTeachingCoursesView.as_view(), name="my-teaching-courses"),
-    path("me/enrolled-courses/", MyEnrolledCoursesView.as_view(), name="my-enrolled-courses"),
-    path("me/submissions/", MySubmissionsView.as_view(), name="my-submissions"),
+    path(
+        "me/teaching-courses/",
+        MyTeachingCoursesViewSet.as_view({'get': 'list'}),
+        name="my-teaching-courses",
+    ),
+    path(
+        "me/submissions/",
+        MySubmissionsViewSet.as_view({'get': 'list'}),
+        name="my-submissions",
+    ),
 ]
