@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from courses.services.lecture_services import get_lecture_representation
 
 from courses.models import Lecture
 
@@ -12,9 +13,5 @@ class LectureSerializer(serializers.ModelSerializer):
         read_only_fields = ("course", "created_at", "updated_at")
 
     def to_representation(self, instance):
-        """Return lecture data, including absolute URL for presentation if available."""
-        rep = super().to_representation(instance)
         request = self.context.get("request")
-        if instance.presentation and request is not None:
-            rep["presentation"] = request.build_absolute_uri(instance.presentation.url)
-        return rep
+        return get_lecture_representation(instance, request)

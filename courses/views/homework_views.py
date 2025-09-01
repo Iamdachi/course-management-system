@@ -10,6 +10,13 @@ from courses.permissions import IsCourseTeacherOrReadOnly, CanAccessSubmissions,
 from courses.models.roles import Role
 from courses.serializers import HomeworkSerializer, HomeworkSubmissionSerializer, GradeSerializer
 
+from courses.services.homework_services import (
+    get_homeworks_for_user,
+    get_homework_submissions,
+    submit_homework, add_grade_to_submission, get_submission_grades, get_submissions_for_user,
+    filter_submissions_for_user,
+)
+
 
 class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
     """Manage homeworks and their submissions."""
@@ -20,39 +27,25 @@ class HomeworkViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
     permission_classes = [IsCourseTeacherOrReadOnly]
 
     def get_queryset(self):
-        """Return homeworks visible to the requesting user."""
-        user = self.request.user
-        if user.role == Role.TEACHER:
-            return Homework.objects.filter(lecture__course__teachers=user)
-        return Homework.objects.filter(lecture__course__students=user)
+        return get_homeworks_for_user(self.request.user)
 
     def get_permissions(self):
-        """Return permissions depending on the current action."""
         if self.action == "submissions":
             return [CanAccessSubmissions()]
         return super().get_permissions()
 
     @action(detail=True, methods=["get", "post"], url_path="submissions")
     def submissions(self, request, pk=None):
-        """Retrieve or submit homework submissions."""
         homework = self.get_object()
 
         if request.method == "GET":
-            submissions = homework.submissions.select_related(
-                "student", "homework__lecture__course"
-            ).prefetch_related(
-                "grades"
-            )
+            submissions = get_homework_submissions(homework)
             serializer = HomeworkSubmissionSerializer(submissions, many=True)
             return Response(serializer.data)
 
         if request.method == "POST":
-            serializer = HomeworkSubmissionSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save(
-                homework=homework,
-                student=request.user,
-            )
+            submission = submit_homework(homework, request.user, request.data, HomeworkSubmissionSerializer)
+            serializer = HomeworkSubmissionSerializer(submission)
             return Response(serializer.data, status=201)
 
 
@@ -63,39 +56,25 @@ class HomeworkSubmissionViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
     permission_classes = [IsStudentAndEnrolled]
 
     def get_queryset(self):
-        """Return submissions visible to the requesting user."""
-        user = self.request.user
-        if user.role == Role.TEACHER:
-            return HomeworkSubmission.objects.filter(
-                homework__lecture__course__teachers=user
-            )
-        return HomeworkSubmission.objects.filter(student=user)
+        return get_submissions_for_user(self.request.user)
 
     def get_permissions(self):
-        """Return permissions depending on the current action."""
         if self.action == "grades" and self.request.method == "POST":
             return [CanGradeCourse()]
         return super().get_permissions()
 
     @action(detail=True, methods=["get", "post"], url_path="grades")
     def grades(self, request, pk=None):
-        """Retrieve or add grades for a homework submission."""
-        submission = (
-            self.get_queryset()
-            .select_related("homework__lecture__course")
-            .prefetch_related("grades__comments")
-            .get(pk=pk)
-        )
+        submission = self.get_object()  # queryset filtering already done in get_queryset()
 
         if request.method == "GET":
-            grades = submission.grades.select_related("teacher").all()
+            grades = get_submission_grades(submission)
             serializer = GradeSerializer(grades, many=True)
             return Response(serializer.data)
 
         if request.method == "POST":
-            serializer = GradeSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save(submission=submission, teacher=request.user)
+            grade = add_grade_to_submission(submission, request.user, request.data, GradeSerializer)
+            serializer = GradeSerializer(grade)
             return Response(serializer.data, status=201)
 
 
@@ -106,19 +85,10 @@ class MySubmissionsView(ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Return submissions filtered by role and optional query params."""
-        user = self.request.user
-        submissions = HomeworkSubmission.objects.for_user(user)
-
-        homework_id = self.request.query_params.get("homework")
-        course_id = self.request.query_params.get("course")
-        lecture_id = self.request.query_params.get("lecture")
-
-        if homework_id:
-            submissions = submissions.filter(homework_id=homework_id)
-        if lecture_id:
-            submissions = submissions.filter(homework__lecture_id=lecture_id)
-        if course_id:
-            submissions = submissions.filter(homework__lecture__course_id=course_id)
-
-        return submissions
+        params = self.request.query_params
+        return filter_submissions_for_user(
+            self.request.user,
+            homework_id=params.get("homework"),
+            lecture_id=params.get("lecture"),
+            course_id=params.get("course"),
+        )

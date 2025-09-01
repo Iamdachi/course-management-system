@@ -20,8 +20,8 @@ class CourseSerializer(serializers.ModelSerializer):
         many=True,
         slug_field="username",
         queryset=User.objects.filter(role=Role.STUDENT),
-        required=False,  # field is optional
-        allow_empty=True,  # allow submitting empty list
+        required=False,
+        allow_empty=True,
     )
 
     class Meta:

@@ -6,7 +6,12 @@ from courses.mixins import PostPutBlockedMixin
 from courses.models import Grade, GradeComment
 from courses.permissions import IsGradeOwnerOrCourseTeacher, CanCommentOnGrade
 from courses.serializers import GradeSerializer, GradeCommentSerializer
-
+from courses.services.grade_services import (
+    create_grade,
+    update_grade,
+    get_grade_comments,
+    add_grade_comment, get_visible_grade_comments, create_grade_comment,
+)
 
 class GradeViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
     """Manage grades and their comments."""
@@ -70,5 +75,3 @@ class GradeCommentViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
         Teacher can see all comments on their course’s grades, students see their own
         """
         return GradeComment.objects.for_user(self.request.user)
-
-

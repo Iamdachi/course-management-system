@@ -7,6 +7,7 @@ from courses.mixins import PostPutBlockedMixin
 from courses.models import Lecture
 from courses.permissions import IsCourseTeacherOrReadOnly
 from courses.serializers import LectureSerializer, HomeworkSerializer
+from courses.services.lecture_services import get_lecture_homeworks, create_homework_for_lecture
 
 
 class LectureViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
@@ -27,16 +28,14 @@ class LectureViewSet(viewsets.ModelViewSet, PostPutBlockedMixin):
         lecture = self.get_object()
 
         if request.method == "GET":
-            homeworks = lecture.homeworks.select_related(
-                "lecture__course"
-            ).prefetch_related("submissions")
+            homeworks = get_lecture_homeworks(lecture)
             serializer = HomeworkSerializer(homeworks, many=True)
             return Response(serializer.data)
 
         if request.method == "POST":
-            if request.user not in lecture.course.teachers.all():
-                raise PermissionDenied("Only course teachers can add homework.")
             serializer = HomeworkSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save(lecture=lecture)
-            return Response(serializer.data, status=201)
+            homework = create_homework_for_lecture(
+                lecture, request.user, serializer.validated_data
+            )
+            return Response(HomeworkSerializer(homework).data, status=201)
