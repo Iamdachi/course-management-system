@@ -1,96 +1,72 @@
 from django.db import models
-from courses.models.roles import Role
+from courses.services.access import is_teacher, is_student
+from courses.services.filters import filters_for_course, filters_for_lecture, filters_for_homework, \
+    filters_for_submission, filters_for_grade, filters_for_comment
 
 
 class RoleFilteredQuerySet(models.QuerySet):
-    """Base QuerySet to filter objects by user role."""
+    """
+    Base QuerySet to filter objects by user role.
+
+    - Teachers see only objects they own/teach.
+    - Students see only objects linked to their enrollments.
+    - Anonymous users see nothing.
+    """
 
     def for_user(self, user, teacher_filter=None, student_filter=None):
-        """Filter objects based on user role (teacher/student)."""
-        if user.is_anonymous:
+        if not user.is_authenticated:
             return self.none()
-        if user.role == Role.TEACHER:
+        if is_teacher(user):
             return self.filter(**teacher_filter) if teacher_filter else self.none()
-        if user.role == Role.STUDENT:
+        if is_student(user):
             return self.filter(**student_filter) if student_filter else self.none()
         return self.none()
 
 
 class CourseQuerySet(RoleFilteredQuerySet):
-    """QuerySet for courses visible to a user."""
+    """ Teachers see courses they teach. Students see courses they are enrolled in."""
 
     def for_user(self, user):
-        """Return courses a teacher teaches or a student is enrolled in."""
-        return super().for_user(
-            user,
-            teacher_filter={"teachers": user},
-            student_filter={"students": user},
-        )
+        return super().for_user(user, *filters_for_course(user))
 
 
 class UserFilteredQuerySet(RoleFilteredQuerySet):
-    """Generic QuerySet for objects linked to courses via FK."""
+    """ Generic QuerySet for objects linked to courses via FK."""
 
     def for_user(self, user, teacher_filter=None, student_filter=None):
-        """Filter objects based on course visibility and user role."""
         return super().for_user(user, teacher_filter, student_filter)
 
 
 class LectureQuerySet(UserFilteredQuerySet):
-    """QuerySet for lectures visible to a user."""
+    """ Teachers see lectures in their own courses. Students see lectures in enrolled courses."""
 
     def for_user(self, user):
-        """Return lectures in courses visible to the user."""
-        return super().for_user(
-            user,
-            teacher_filter={"course__teachers": user},
-            student_filter={"course__students": user},
-        )
+        return super().for_user(user, *filters_for_lecture(user))
 
 
 class HomeworkQuerySet(UserFilteredQuerySet):
-    """QuerySet for homeworks visible to a user."""
+    """ Teachers see homeworks in their own courses. Students see homeworks in enrolled courses."""
 
     def for_user(self, user):
-        """Return homeworks in lectures visible to the user."""
-        return super().for_user(
-            user,
-            teacher_filter={"lecture__course__teachers": user},
-            student_filter={"lecture__course__students": user},
-        )
+        return super().for_user(user, *filters_for_homework(user))
 
 
 class HomeworkSubmissionQuerySet(UserFilteredQuerySet):
-    """QuerySet for homework submissions visible to a user."""
+    """ Teachers see submissions in their own courses. Students see only their own submissions."""
 
     def for_user(self, user):
-        """Return submissions for courses or student-owned submissions."""
-        return super().for_user(
-            user,
-            teacher_filter={"homework__lecture__course__teachers": user},
-            student_filter={"student": user},
-        )
+        return super().for_user(user, *filters_for_submission(user))
 
 
 class GradeQuerySet(UserFilteredQuerySet):
-    """QuerySet for grades visible to a user."""
+    """ Teachers see grades in their own courses. Students see only their own grades."""
 
     def for_user(self, user):
-        """Return grades in courses or grades of the student."""
-        return super().for_user(
-            user,
-            teacher_filter={"submission__homework__lecture__course__teachers": user},
-            student_filter={"submission__student": user},
-        )
+        return super().for_user(user, *filters_for_grade(user))
 
 
 class GradeCommentQuerySet(UserFilteredQuerySet):
-    """QuerySet for grade comments visible to a user."""
+    """ Teachers see comments on grades in their own courses. Students see comments only on their own grades."""
 
     def for_user(self, user):
-        """Return grade comments in courses or on the student's grades."""
-        return super().for_user(
-            user,
-            teacher_filter={"grade__submission__homework__lecture__course__teachers": user},
-            student_filter={"grade__submission__student": user},
-        )
+        return super().for_user(user, *filters_for_comment(user))
